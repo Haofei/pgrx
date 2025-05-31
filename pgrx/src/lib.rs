@@ -131,6 +131,7 @@ pub use pg_sys::{
     check_for_interrupts, debug1, debug2, debug3, debug4, debug5, ereport, error, function_name,
     info, log, notice, warning, FATAL, PANIC,
 };
+
 #[doc(hidden)]
 pub use pgrx_sql_entity_graph;
 

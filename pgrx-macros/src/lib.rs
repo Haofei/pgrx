@@ -698,7 +698,7 @@ fn impl_postgres_enum(ast: DeriveInput) -> syn::Result<proc_macro2::TokenStream>
     stream.extend(quote! {
         impl ::pgrx::datum::FromDatum for #enum_ident {
             #[inline]
-            unsafe fn from_polymorphic_datum(datum: ::pgrx::pg_sys::Datum, is_null: bool, typeoid: ::pgrx::pg_sys::Oid) -> Option<#enum_ident> {
+            unsafe fn from_polymorphic_datum(datum: ::pgrx::pg_sys::Datum, is_null: bool, _typeoid: ::pgrx::pg_sys::Oid) -> Option<#enum_ident> {
                 if is_null {
                     None
                 } else {
@@ -781,6 +781,7 @@ Optionally accepts the following attributes:
 
 * `inoutfuncs(some_in_fn, some_out_fn)`: Define custom in/out functions for the type.
 * `pgvarlena_inoutfuncs(some_in_fn, some_out_fn)`: Define custom in/out functions for the `PgVarlena` of this type.
+* `pg_binary_protocol`: Use the binary protocol for this type.
 * `pgrx(alignment = "<align>")`: Derive Postgres alignment from Rust type. One of `"on"`, or `"off"`.
 * `sql`: Same arguments as [`#[pgrx(sql = ..)]`](macro@pgrx).
 */
@@ -789,6 +790,7 @@ Optionally accepts the following attributes:
     attributes(
         inoutfuncs,
         pgvarlena_inoutfuncs,
+        pg_binary_protocol,
         bikeshed_postgres_type_manually_impl_from_into_datum,
         requires,
         pgrx
@@ -806,6 +808,9 @@ fn impl_postgres_type(ast: DeriveInput) -> syn::Result<proc_macro2::TokenStream>
     let has_lifetimes = generics.lifetimes().next();
     let funcname_in = Ident::new(&format!("{name}_in").to_lowercase(), name.span());
     let funcname_out = Ident::new(&format!("{name}_out").to_lowercase(), name.span());
+    let funcname_recv = Ident::new(&format!("{name}_recv").to_lowercase(), name.span());
+    let funcname_send = Ident::new(&format!("{name}_send").to_lowercase(), name.span());
+
     let mut args = parse_postgres_type_args(&ast.attrs);
     let mut stream = proc_macro2::TokenStream::new();
 
@@ -825,7 +830,9 @@ fn impl_postgres_type(ast: DeriveInput) -> syn::Result<proc_macro2::TokenStream>
         }
     }
 
-    if args.is_empty() {
+    if !args.contains(&PostgresTypeAttribute::InOutFuncs)
+        && !args.contains(&PostgresTypeAttribute::PgVarlenaInOutFuncs)
+    {
         // assume the user wants us to implement the InOutFuncs
         args.insert(PostgresTypeAttribute::Default);
     }
@@ -937,14 +944,14 @@ fn impl_postgres_type(ast: DeriveInput) -> syn::Result<proc_macro2::TokenStream>
     if args.contains(&PostgresTypeAttribute::Default) {
         stream.extend(quote! {
             #[doc(hidden)]
-            #[::pgrx::pgrx_macros::pg_extern(immutable,parallel_safe)]
+            #[::pgrx::pgrx_macros::pg_extern(immutable, parallel_safe)]
             pub fn #funcname_in #generics(input: Option<&#lifetime ::core::ffi::CStr>) -> Option<#name #generics> {
                 use ::pgrx::inoutfuncs::json_from_slice;
                 input.map(|cstr| json_from_slice(cstr.to_bytes()).ok()).flatten()
             }
 
             #[doc(hidden)]
-            #[::pgrx::pgrx_macros::pg_extern (immutable,parallel_safe)]
+            #[::pgrx::pgrx_macros::pg_extern (immutable, parallel_safe)]
             pub fn #funcname_out #generics(input: #name #generics) -> ::pgrx::ffi::CString {
                 use ::pgrx::inoutfuncs::json_to_vec;
                 let mut bytes = json_to_vec(&input).unwrap();
@@ -1000,7 +1007,57 @@ fn impl_postgres_type(ast: DeriveInput) -> syn::Result<proc_macro2::TokenStream>
         });
     }
 
-    let sql_graph_entity_item = sql_gen::PostgresTypeDerive::from_derive_input(ast)?;
+    if args.contains(&PostgresTypeAttribute::PgBinaryProtocol) {
+        // At this time, the `PostgresTypeAttribute` does not impact the way we generate
+        // the `recv` and `send` functions.
+        stream.extend(quote! {
+            #[doc(hidden)]
+            #[::pgrx::pgrx_macros::pg_extern(immutable, strict, parallel_safe)]
+            pub fn #funcname_recv #generics(
+                internal: ::pgrx::datum::Internal,
+            ) -> #name #generics {
+                let buf = unsafe { internal.get_mut::<::pgrx::pg_sys::StringInfoData>().unwrap() };
+
+                let mut serialized = ::pgrx::StringInfo::new();
+
+                serialized.push_bytes(&[0u8; ::pgrx::pg_sys::VARHDRSZ]); // reserve space for the header
+                serialized.push_bytes(unsafe {
+                    core::slice::from_raw_parts(
+                        buf.data as *const u8,
+                        buf.len as usize
+                    )
+                });
+
+                let size = serialized.len();
+                let varlena = serialized.into_char_ptr();
+
+                unsafe{
+                    ::pgrx::set_varsize_4b(varlena as *mut ::pgrx::pg_sys::varlena, size as i32);
+                    buf.cursor = buf.len;
+                    ::pgrx::datum::cbor_decode(varlena as *mut ::pgrx::pg_sys::varlena)
+                }
+            }
+            #[doc(hidden)]
+            #[::pgrx::pgrx_macros::pg_extern(immutable, strict, parallel_safe)]
+            pub fn #funcname_send #generics(input: #name #generics) -> Vec<u8> {
+                use ::pgrx::datum::{FromDatum, IntoDatum};
+                let Some(datum): Option<::pgrx::pg_sys::Datum> = input.into_datum() else {
+                    ::pgrx::error!("Datum of type `{}` is unexpectedly NULL.", stringify!(#name));
+                };
+                unsafe {
+                    let Some(serialized): Option<Vec<u8>> = FromDatum::from_datum(datum, false) else {
+                        ::pgrx::error!("Failed to CBOR-serialize Datum to type `{}`.", stringify!(#name));
+                    };
+                    serialized
+                }
+            }
+        });
+    }
+
+    let sql_graph_entity_item = sql_gen::PostgresTypeDerive::from_derive_input(
+        ast,
+        args.contains(&PostgresTypeAttribute::PgBinaryProtocol),
+    )?;
     sql_graph_entity_item.to_tokens(&mut stream);
 
     Ok(stream)
@@ -1097,6 +1154,7 @@ fn impl_guc_enum(ast: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
 #[derive(Debug, Hash, Ord, PartialOrd, Eq, PartialEq)]
 enum PostgresTypeAttribute {
     InOutFuncs,
+    PgBinaryProtocol,
     PgVarlenaInOutFuncs,
     Default,
     ManualFromIntoDatum,
@@ -1111,6 +1169,9 @@ fn parse_postgres_type_args(attributes: &[Attribute]) -> HashSet<PostgresTypeAtt
         match path.as_str() {
             "inoutfuncs" => {
                 categorized_attributes.insert(PostgresTypeAttribute::InOutFuncs);
+            }
+            "pg_binary_protocol" => {
+                categorized_attributes.insert(PostgresTypeAttribute::PgBinaryProtocol);
             }
             "pgvarlena_inoutfuncs" => {
                 categorized_attributes.insert(PostgresTypeAttribute::PgVarlenaInOutFuncs);
