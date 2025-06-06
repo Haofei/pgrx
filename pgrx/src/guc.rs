@@ -225,6 +225,7 @@ impl<T: GucEnum> GucSetting<T> {
 pub struct GucRegistry {}
 
 impl GucRegistry {
+    // GUC Registration functions that do not expose hooks
     pub fn define_bool_guc(
         name: &'static CStr,
         short_description: &'static CStr,
@@ -351,6 +352,194 @@ impl GucRegistry {
                 None,
                 None,
                 None,
+            );
+        }
+    }
+
+    /// Define a boolean GUC with custom hooks.
+    ///
+    /// # Hooks
+    ///
+    /// * `check_hook` - Validates new values. Return false to reject.
+    /// * `assign_hook` - Called after value is set. Use for side effects.
+    /// * `show_hook` - Returns custom display string for SHOW commands.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because hook functions must be properly guarded against Rust panics.
+    /// Any hook function that might panic must be marked with `#[pg_guard]` to ensure proper
+    /// conversion of Rust panics into PostgreSQL errors.
+    ///
+    pub unsafe fn define_bool_guc_with_hooks(
+        name: &'static CStr,
+        short_description: &'static CStr,
+        long_description: &'static CStr,
+        setting: &'static GucSetting<bool>,
+        context: GucContext,
+        flags: GucFlags,
+        check_hook: pg_sys::GucBoolCheckHook,
+        assign_hook: pg_sys::GucBoolAssignHook,
+        show_hook: pg_sys::GucShowHook,
+    ) {
+        unsafe {
+            pg_sys::DefineCustomBoolVariable(
+                name.as_ptr(),
+                short_description.as_ptr(),
+                long_description.as_ptr(),
+                setting.value.as_ptr(),
+                setting.value.get(),
+                context as isize as _,
+                flags.bits(),
+                check_hook,
+                assign_hook,
+                show_hook,
+            );
+        }
+    }
+
+    /// Define an integer GUC with custom hooks.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because hook functions must be properly guarded against Rust panics.
+    /// Any hook function that might panic must be marked with `#[pg_guard]` to ensure proper
+    /// conversion of Rust panics into PostgreSQL errors.
+    pub unsafe fn define_int_guc_with_hooks(
+        name: &'static CStr,
+        short_description: &'static CStr,
+        long_description: &'static CStr,
+        setting: &'static GucSetting<i32>,
+        min_value: i32,
+        max_value: i32,
+        context: GucContext,
+        flags: GucFlags,
+        check_hook: pg_sys::GucIntCheckHook,
+        assign_hook: pg_sys::GucIntAssignHook,
+        show_hook: pg_sys::GucShowHook,
+    ) {
+        unsafe {
+            pg_sys::DefineCustomIntVariable(
+                name.as_ptr(),
+                short_description.as_ptr(),
+                long_description.as_ptr(),
+                setting.value.as_ptr(),
+                setting.value.get(),
+                min_value,
+                max_value,
+                context as isize as _,
+                flags.bits(),
+                check_hook,
+                assign_hook,
+                show_hook,
+            )
+        }
+    }
+
+    /// Define a string GUC with custom hooks.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because hook functions must be properly guarded against Rust panics.
+    /// Any hook function that might panic must be marked with `#[pg_guard]` to ensure proper
+    /// conversion of Rust panics into PostgreSQL errors.
+    pub unsafe fn define_string_guc_with_hooks(
+        name: &'static CStr,
+        short_description: &'static CStr,
+        long_description: &'static CStr,
+        setting: &'static GucSetting<Option<CString>>,
+        context: GucContext,
+        flags: GucFlags,
+        check_hook: pg_sys::GucStringCheckHook,
+        assign_hook: pg_sys::GucStringAssignHook,
+        show_hook: pg_sys::GucShowHook,
+    ) {
+        unsafe {
+            pg_sys::DefineCustomStringVariable(
+                name.as_ptr(),
+                short_description.as_ptr(),
+                long_description.as_ptr(),
+                setting.value.as_ptr(),
+                setting.value.get(),
+                context as isize as _,
+                flags.bits(),
+                check_hook,
+                assign_hook,
+                show_hook,
+            );
+        }
+    }
+
+    /// Define a float GUC with custom hooks.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because hook functions must be properly guarded against Rust panics.
+    /// Any hook function that might panic must be marked with `#[pg_guard]` to ensure proper
+    /// conversion of Rust panics into PostgreSQL errors.
+    ///
+    pub fn define_float_guc_with_hooks(
+        name: &'static CStr,
+        short_description: &'static CStr,
+        long_description: &'static CStr,
+        setting: &'static GucSetting<f64>,
+        min_value: f64,
+        max_value: f64,
+        context: GucContext,
+        flags: GucFlags,
+        check_hook: pg_sys::GucRealCheckHook,
+        assign_hook: pg_sys::GucRealAssignHook,
+        show_hook: pg_sys::GucShowHook,
+    ) {
+        unsafe {
+            pg_sys::DefineCustomRealVariable(
+                name.as_ptr(),
+                short_description.as_ptr(),
+                long_description.as_ptr(),
+                setting.value.as_ptr(),
+                setting.value.get(),
+                min_value,
+                max_value,
+                context as isize as _,
+                flags.bits(),
+                check_hook,
+                assign_hook,
+                show_hook,
+            );
+        }
+    }
+
+    /// Define an enum GUC with custom hooks.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because hook functions must be properly guarded against Rust panics.
+    /// Any hook function that might panic must be marked with `#[pg_guard]` to ensure proper
+    /// conversion of Rust panics into PostgreSQL errors.
+    pub unsafe fn define_enum_guc_with_hooks<T: GucEnum>(
+        name: &'static CStr,
+        short_description: &'static CStr,
+        long_description: &'static CStr,
+        setting: &'static GucSetting<T>,
+        context: GucContext,
+        flags: GucFlags,
+        check_hook: pg_sys::GucEnumCheckHook,
+        assign_hook: pg_sys::GucEnumAssignHook,
+        show_hook: pg_sys::GucShowHook,
+    ) {
+        setting.value.set(setting.boot_val.to_ordinal());
+        unsafe {
+            pg_sys::DefineCustomEnumVariable(
+                name.as_ptr(),
+                short_description.as_ptr(),
+                long_description.as_ptr(),
+                setting.value.as_ptr(),
+                setting.value.get(),
+                T::CONFIG_ENUM_ENTRY,
+                context as isize as _,
+                flags.bits(),
+                check_hook,
+                assign_hook,
+                show_hook,
             );
         }
     }
