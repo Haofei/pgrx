@@ -81,12 +81,7 @@ impl Package {
         let out_dir = if let Some(out_dir) = self.out_dir {
             out_dir
         } else {
-            build_base_path(
-                &pg_config,
-                &package_manifest_path,
-                &profile,
-                self.target.as_ref().map(|x| x.as_str()),
-            )?
+            build_base_path(&pg_config, &package_manifest_path, &profile, self.target.as_deref())?
         };
 
         let output_files = package_extension(
@@ -98,7 +93,7 @@ impl Package {
             &profile,
             self.test,
             &self.features,
-            self.target.as_ref().map(|x| x.as_str()),
+            self.target.as_deref(),
         )?;
 
         Ok((out_dir, output_files))

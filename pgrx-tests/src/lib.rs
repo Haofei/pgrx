@@ -9,6 +9,8 @@
 //LICENSE Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #![cfg_attr(feature = "nightly", feature(allocator_api))]
+#![allow(clippy::type_complexity)]
+#![allow(clippy::result_large_err)]
 
 mod framework;
 #[cfg(any(test, feature = "pg_test"))]
