@@ -2,8 +2,8 @@
 name = "pgrx-bindgen"
 description = "additional bindgen support for pgrx"
 version = "0.15.0"
-edition = "2021"
-license = "MIT"
+edition.workspace = true
+license.workspace = true
 homepage = "https://github.com/pgcentralfoundation/pgrx"
 repository = "https://github.com/pgcentralfoundation/pgrx"
 documentation = "https://docs.rs/pgrx-bindgen"
