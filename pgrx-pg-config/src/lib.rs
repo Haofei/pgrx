@@ -8,7 +8,7 @@
 //LICENSE
 //LICENSE Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 //! Wrapper around Postgres' `pg_config` command-line tool
-use eyre::{eyre, WrapErr};
+use eyre::{WrapErr, eyre};
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -280,7 +280,23 @@ impl PgConfig {
 
     pub fn get_version(&self) -> eyre::Result<PgVersion> {
         let version_string = self.run("--version")?;
-        let (major, minor) = Self::parse_version_str(&version_string)?;
+        let (major, minor) = match Self::parse_version_str(&version_string) {
+            Ok(version) => version,
+            Err(e) => {
+                if let Some(path) = self.path()
+                    && let Some(file_name) = path.file_name()
+                    && !file_name.to_string_lossy().contains("pg_config")
+                {
+                    // shouldn't this path be named pg_config?
+                    return Err(e).wrap_err(format!(
+                        "path apparently not to pg_config binary: {}",
+                        path.display()
+                    ));
+                } else {
+                    return Err(e);
+                }
+            }
+        };
         Ok(PgVersion::new(major, minor, None))
     }
 
@@ -531,11 +547,7 @@ pub enum PgConfigSelector<'a> {
 
 impl<'a> PgConfigSelector<'a> {
     pub fn new(label: &'a str) -> Self {
-        if label == "all" {
-            PgConfigSelector::All
-        } else {
-            PgConfigSelector::Specific(label)
-        }
+        if label == "all" { PgConfigSelector::All } else { PgConfigSelector::Specific(label) }
     }
 }
 

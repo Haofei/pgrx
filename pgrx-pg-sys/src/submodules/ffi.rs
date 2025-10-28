@@ -30,18 +30,18 @@ mod cee_scape {
     where
         F: for<'a> FnOnce(&'a SigJmpBufFields) -> c_int,
     {
-        extern "C-unwind" {
+        unsafe extern "C-unwind" {
             fn call_closure_with_sigsetjmp(
                 savemask: c_int,
                 closure_env_ptr: *mut c_void,
-                closure_code: extern "C-unwind" fn(
+                closure_code: unsafe extern "C-unwind" fn(
                     jbuf: *const SigJmpBufFields,
                     env_ptr: *mut c_void,
                 ) -> c_int,
             ) -> c_int;
         }
 
-        extern "C-unwind" fn call_from_c_to_rust<F>(
+        unsafe extern "C-unwind" fn call_from_c_to_rust<F>(
             jbuf: *const SigJmpBufFields,
             closure_env_ptr: *mut c_void,
         ) -> c_int
@@ -66,7 +66,7 @@ mod cee_scape {
     }
 }
 
-use cee_scape::{call_with_sigsetjmp, SigJmpBufFields};
+use cee_scape::{SigJmpBufFields, call_with_sigsetjmp};
 
 /**
 Given a closure that is assumed to be a wrapped Postgres `extern "C-unwind"` function, [pg_guard_ffi_boundary]
@@ -216,23 +216,17 @@ unsafe fn pg_guard_ffi_boundary_impl<T, F: FnOnce() -> T>(f: F) -> T {
             let detail = if errdata.detail.is_null() {
                 None
             } else {
-                {
-                    Some(CStr::from_ptr(errdata.detail).to_string_lossy().to_string())
-                }
+                { Some(CStr::from_ptr(errdata.detail).to_string_lossy().to_string()) }
             };
             let hint = if errdata.hint.is_null() {
                 None
             } else {
-                {
-                    Some(CStr::from_ptr(errdata.hint).to_string_lossy().to_string())
-                }
+                { Some(CStr::from_ptr(errdata.hint).to_string_lossy().to_string()) }
             };
             let funcname = if errdata.funcname.is_null() {
                 None
             } else {
-                {
-                    Some(CStr::from_ptr(errdata.funcname).to_string_lossy().to_string())
-                }
+                { Some(CStr::from_ptr(errdata.funcname).to_string_lossy().to_string()) }
             };
             let file = if errdata.filename.is_null() {
                 String::from("<null filename>")
