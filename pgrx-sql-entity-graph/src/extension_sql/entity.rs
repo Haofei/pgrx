@@ -146,8 +146,7 @@ impl Display for SqlDeclaredEntity {
 }
 
 impl SqlDeclaredEntity {
-    pub fn build(variant: impl AsRef<str>, name: impl AsRef<str>) -> eyre::Result<Self> {
-        let name = name.as_ref();
+    pub fn build(variant: &str, name: &str) -> eyre::Result<Self> {
         let data = SqlDeclaredEntityData {
             sql: name
                 .split("::")
@@ -169,7 +168,7 @@ impl SqlDeclaredEntity {
                 format!("pgrx::pgbox::PgBox<{}, pgrx::pgbox::AllocatedByPostgres>", name),
             ],
         };
-        let retval = match variant.as_ref() {
+        let retval = match variant {
             "Type" => Self::Type(data),
             "Enum" => Self::Enum(data),
             "Function" => Self::Function(data),

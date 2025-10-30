@@ -51,7 +51,7 @@ impl CommandExecute for Connect {
         let (package_manifest, package_manifest_path) = get_package_manifest(
             &Features::default(),
             self.package.as_ref(),
-            self.manifest_path.as_ref(),
+            self.manifest_path.as_deref(),
         )?;
         let (pg_config, _pg_version) = match pg_config_and_version(
             &pgrx,
@@ -75,7 +75,7 @@ impl CommandExecute for Connect {
             Some(dbname) => dbname,
             None => {
                 // We should infer from package
-                get_property(package_manifest_path, "extname")
+                get_property(&package_manifest_path, "extname")
                     .wrap_err("could not determine extension name")?
                     .ok_or(eyre!("extname not found in control file"))?
             }

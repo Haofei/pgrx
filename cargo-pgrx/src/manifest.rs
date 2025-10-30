@@ -12,7 +12,7 @@ use cargo_toml::Manifest;
 use clap_cargo::Features;
 use eyre::{Context, eyre};
 use pgrx_pg_config::{PgConfig, PgConfigSelector, Pgrx};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
 pub(crate) enum PgVersionSource {
@@ -197,11 +197,11 @@ pub(crate) fn display_version_info(pg_config: &PgConfig, pg_version: &PgVersionS
 pub(crate) fn get_package_manifest(
     features: &Features,
     package_name: Option<&String>,
-    manifest_path: Option<impl AsRef<std::path::Path>>,
+    manifest_path: Option<&Path>,
 ) -> eyre::Result<(Manifest, PathBuf)> {
-    let metadata = crate::metadata::metadata(features, manifest_path.as_ref())
+    let metadata = crate::metadata::metadata(features, manifest_path)
         .wrap_err("couldn't get cargo metadata")?;
-    crate::metadata::validate(manifest_path.as_ref(), &metadata)?;
+    crate::metadata::validate(manifest_path, &metadata)?;
     let package_manifest_path = crate::manifest::manifest_path(&metadata, package_name)
         .wrap_err("Couldn't get manifest path")?;
 

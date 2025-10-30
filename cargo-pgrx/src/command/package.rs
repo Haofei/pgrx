@@ -51,9 +51,9 @@ pub(crate) struct Package {
 
 impl Package {
     pub(crate) fn perform(mut self) -> eyre::Result<(PathBuf, Vec<PathBuf>)> {
-        let metadata = crate::metadata::metadata(&self.features, self.manifest_path.as_ref())
+        let metadata = crate::metadata::metadata(&self.features, self.manifest_path.as_deref())
             .wrap_err("couldn't get cargo metadata")?;
-        crate::metadata::validate(self.manifest_path.as_ref(), &metadata)?;
+        crate::metadata::validate(self.manifest_path.as_deref(), &metadata)?;
         let package_manifest_path =
             crate::manifest::manifest_path(&metadata, self.package.as_ref())
                 .wrap_err("Couldn't get manifest path")?;
@@ -85,7 +85,7 @@ impl Package {
         };
 
         let output_files = package_extension(
-            self.manifest_path.as_ref(),
+            self.manifest_path.as_deref(),
             self.package.as_ref(),
             &package_manifest_path,
             &pg_config,
@@ -114,7 +114,7 @@ impl CommandExecute for Package {
     test = is_test,
 ))]
 pub(crate) fn package_extension(
-    user_manifest_path: Option<impl AsRef<Path>>,
+    user_manifest_path: Option<&Path>,
     user_package: Option<&String>,
     package_manifest_path: &Path,
     pg_config: &PgConfig,
@@ -147,7 +147,7 @@ pub(crate) fn package_extension(
 
 pub(crate) fn build_base_path(
     pg_config: &PgConfig,
-    manifest_path: impl AsRef<Path>,
+    manifest_path: &Path,
     profile: &CargoProfile,
     target: Option<&str>,
 ) -> eyre::Result<PathBuf> {
