@@ -74,22 +74,12 @@ pub fn pg_test(attr: TokenStream, item: TokenStream) -> TokenStream {
         Item::Fn(mut func) => {
             // Here we need to break out attributes into test and non-test attributes,
             // so the generated #[test] attributes are in the appropriate place.
-            let mut test_attributes = Vec::new();
-            let mut non_test_attributes = Vec::new();
-
-            for attribute in func.attrs.iter() {
-                if let Some(ident) = attribute.path().get_ident() {
-                    let ident_str = ident.to_string();
-
-                    if ident_str == "ignore" || ident_str == "should_panic" {
-                        test_attributes.push(attribute.clone());
-                    } else {
-                        non_test_attributes.push(attribute.clone());
-                    }
-                } else {
-                    non_test_attributes.push(attribute.clone());
-                }
-            }
+            let (test_attributes, non_test_attributes) =
+                func.attrs.into_iter().partition::<Vec<Attribute>, _>(|attr| {
+                    attr.path()
+                        .get_ident()
+                        .is_some_and(|ident| ident == "ignore" || ident == "should_panic")
+                });
 
             func.attrs = non_test_attributes;
 
@@ -1116,26 +1106,24 @@ fn impl_guc_enum(ast: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
         let default_hidden = false;
         let mut name = None;
         let mut hidden = None;
+
         for attr in variant.attrs.iter() {
-            if let Some(ident) = attr.path().get_ident() {
-                if GucEnumAttribute::is_guc_enum_attribute(&ident.to_string()) {
-                    let pair: GucEnumAttribute = syn::parse2(attr.meta.to_token_stream())?;
-                    match pair {
-                        GucEnumAttribute::Name(value) => {
-                            if name.replace(value).is_some() {
-                                return Err(syn::Error::new(
-                                    ast.span(),
-                                    "too many #[name] attributes",
-                                ));
-                            }
+            if let Some(ident) = attr.path().get_ident()
+                && GucEnumAttribute::is_guc_enum_attribute(&ident.to_string())
+            {
+                let pair: GucEnumAttribute = syn::parse2(attr.meta.to_token_stream())?;
+                match pair {
+                    GucEnumAttribute::Name(value) => {
+                        if name.replace(value).is_some() {
+                            return Err(syn::Error::new(ast.span(), "too many #[name] attributes"));
                         }
-                        GucEnumAttribute::Hidden(value) => {
-                            if hidden.replace(value).is_some() {
-                                return Err(syn::Error::new(
-                                    ast.span(),
-                                    "too many #[hidden] attributes",
-                                ));
-                            }
+                    }
+                    GucEnumAttribute::Hidden(value) => {
+                        if hidden.replace(value).is_some() {
+                            return Err(syn::Error::new(
+                                ast.span(),
+                                "too many #[hidden] attributes",
+                            ));
                         }
                     }
                 }
