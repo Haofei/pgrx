@@ -8,6 +8,7 @@
 //LICENSE
 //LICENSE Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 use crate::CommandExecute;
+use crate::cargo::{self, Cargo};
 use crate::command::get::{find_control_file, get_property};
 use crate::manifest::{get_package_manifest, pg_config_and_version};
 use crate::profile::CargoProfile;
@@ -20,6 +21,7 @@ use pgrx_pg_config::{Pgrx, get_target_dir};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
+use std::str;
 
 /// Generate extension schema files
 #[derive(clap::Args, Debug)]
@@ -120,7 +122,7 @@ impl CommandExecute for Schema {
     dot,
     features = ?features.features,
 ))]
-pub(crate) fn generate_schema(
+pub(crate) fn generate_schema_for_cli(
     user_manifest_path: Option<&Path>,
     user_package: Option<&str>,
     package_manifest_path: &Path,
@@ -135,10 +137,6 @@ pub(crate) fn generate_schema(
     output_tracking: &mut Vec<PathBuf>,
 ) -> eyre::Result<()> {
     let manifest = Manifest::from_path(&package_manifest_path)?;
-    let (control_file, _extname) = find_control_file(&package_manifest_path)?;
-
-    let flags = std::env::var("PGRX_BUILD_FLAGS").unwrap_or_default();
-
     let features_arg = features.features.join(" ");
 
     let package_name = if let Some(user_package) = user_package {
@@ -146,46 +144,51 @@ pub(crate) fn generate_schema(
     } else {
         manifest.package_name()?
     };
-    let lib_name = manifest.lib_name()?;
-    let lib_filename = manifest.lib_filename()?;
+
+    let cargo = Cargo::default()
+        .package(package_name)
+        .std_streams([cargo::Stdio::Null, cargo::Stdio::Null, cargo::Stdio::Inherit])
+        .manifest_path(user_manifest_path.map(|p| p.to_owned()))
+        .log_level(log_level)
+        .features(features.clone());
 
     if !skip_build {
         // NB:  The only path where this happens is via the command line using `cargo pgrx schema`
-        first_build(
-            user_manifest_path,
-            profile,
-            features,
-            log_level.clone(),
-            is_test,
-            &features_arg,
-            &flags,
-            target,
-            &package_name,
-        )?;
+        first_build(cargo.clone(), profile, is_test, &features_arg, target)?;
     };
-
-    let symbols = compute_symbols(profile, &lib_filename, target)?;
-
-    let mut out_path = None;
-    if let Some(path) = path {
-        let x = path.to_str().expect("`path` is not a valid UTF8 string.");
-        out_path = Some(x.to_string());
-    }
-
-    let mut out_dot = None;
-    if let Some(dot) = dot {
-        let x = dot.to_str().expect("`dot` is not a valid UTF8 string.");
-        out_dot = Some(x.to_string());
-    };
-
-    let codegen = compute_codegen(
-        &control_file,
+    generate_schema_implicit(
+        cargo,
         package_manifest_path,
-        &symbols,
-        &lib_name,
-        out_path,
-        out_dot,
-    )?;
+        profile,
+        features_arg,
+        target,
+        path,
+        dot,
+        output_tracking,
+        manifest,
+    )
+}
+pub(crate) use generate_schema_for_cli as generate_schema;
+
+pub(crate) fn generate_schema_implicit(
+    cargo: Cargo,
+    package_manifest_path: &Path,
+    profile: &CargoProfile,
+    features_arg: String,
+    target: Option<&str>,
+    path: Option<&Path>,
+    dot: Option<&Path>,
+    output_tracking: &mut Vec<PathBuf>,
+    manifest: cargo_toml::Manifest,
+) -> eyre::Result<()> {
+    let (control_file, _extname) = find_control_file(&package_manifest_path)?;
+    let lib_name = manifest.lib_name()?;
+    let lib_filename = manifest.lib_filename()?;
+
+    let symbols = find_and_compute_symbols(profile, &lib_filename, target)?;
+
+    let codegen =
+        compute_codegen(&control_file, package_manifest_path, &symbols, &lib_name, path, dot)?;
 
     let embed = {
         let mut embed = tempfile::NamedTempFile::new()?;
@@ -194,7 +197,7 @@ pub(crate) fn generate_schema(
         embed
     };
 
-    if let Some(out_path) = path.as_ref() {
+    if let Some(out_path) = path {
         if let Some(parent) = out_path.parent() {
             std::fs::create_dir_all(parent).wrap_err("Could not create parent directory")?;
         }
@@ -205,30 +208,18 @@ pub(crate) fn generate_schema(
         tracing::info!(dot = %dot_path.display(), "Writing Graphviz DOT");
     }
 
-    second_build(
-        user_manifest_path,
-        features,
-        log_level.clone(),
-        &features_arg,
-        &flags,
-        embed.path(),
-        &package_name,
-        &manifest,
-    )?;
+    second_build(cargo, &features_arg, embed.path(), &manifest)?;
 
     compute_sql(&manifest)?;
 
     Ok(())
 }
 
-fn compute_symbols(
+fn find_and_compute_symbols(
     profile: &CargoProfile,
     lib_filename: &str,
     target: Option<&str>,
 ) -> eyre::Result<Vec<String>> {
-    use object::Object;
-    use std::collections::HashSet;
-
     // Inspect the symbol table for a list of `__pgrx_internals` we should have the generator call
     let mut lib_so = get_target_dir()?;
     if let Some(target) = target {
@@ -240,26 +231,28 @@ fn compute_symbols(
     let lib_so_data = std::fs::read(&lib_so).wrap_err("couldn't read extension shared object")?;
     let lib_so_obj_file =
         parse_object(&lib_so_data).wrap_err("couldn't parse extension shared object")?;
-    let lib_so_exports =
-        lib_so_obj_file.exports().wrap_err("couldn't get exports from extension shared object")?;
 
+    // FIXME: properly parse the target tuple per https://github.com/pgcentralfoundation/pgrx/issues/2183
+    let symbol_prefix = if cfg!(target_os = "macos") { "_" } else { "" };
+    compute_symbols(&lib_so_obj_file, symbol_prefix)
+}
+
+fn compute_symbols(obj_file: &object::File<'_>, symbol_prefix: &str) -> eyre::Result<Vec<String>> {
+    use std::collections::HashSet;
+    let lib_so_exports = object::Object::exports(obj_file)
+        .wrap_err("couldn't get exports from extension shared object")?;
     // Some users reported experiencing duplicate entries if we don't ensure `fns_to_call`
     // has unique entries.
     let mut fns_to_call = HashSet::new();
     for export in lib_so_exports {
-        let name = std::str::from_utf8(export.name())?.to_string();
-        #[cfg(target_os = "macos")]
-        let name = {
-            // Mac will prefix symbols with `_` automatically, so we remove it to avoid getting
-            // two.
-            let mut name = name;
-            let rename = name.split_off(1);
-            assert_eq!(name, "_");
-            rename
-        };
+        let name = str::from_utf8(export.name()).expect("Rust symbol names are UTF8");
+        // macOS will prefix symbols with `_` automatically, so we remove one
+        let name = name
+            .strip_prefix(symbol_prefix)
+            .ok_or(eyre!("platform symbol prefix not found on {name}"))?;
 
         if name.starts_with("__pgrx_internals") {
-            fns_to_call.insert(name);
+            fns_to_call.insert(name.to_owned());
         }
     }
     let mut seen_schemas = Vec::new();
@@ -323,64 +316,21 @@ fn compute_symbols(
 }
 
 fn first_build(
-    user_manifest_path: Option<&Path>,
+    cargo: Cargo,
     profile: &CargoProfile,
-    features: &clap_cargo::Features,
-    log_level: Option<String>,
     is_test: bool,
     features_arg: &str,
-    flags: &str,
     target: Option<&str>,
-    package_name: &str,
 ) -> eyre::Result<()> {
-    let mut command = crate::cargo::cargo();
-    command.stdin(Stdio::null());
-    command.stdout(Stdio::null());
-    command.stderr(Stdio::inherit());
-
-    if is_test {
-        command.arg("test");
-        command.arg("--no-run");
+    let cargo = if is_test {
+        cargo.subcommand("test").flag("--no-run")
     } else {
-        command.arg("build");
-        command.arg("--lib");
-    }
+        cargo.subcommand("build").flag("--lib")
+    };
 
-    command.arg("--package");
-    command.arg(package_name);
+    let cargo = cargo.profile(profile.clone()).target(target.map(|t| t.to_owned()));
 
-    if let Some(user_manifest_path) = user_manifest_path.as_ref() {
-        command.arg("--manifest-path");
-        command.arg(user_manifest_path);
-    }
-
-    command.args(profile.cargo_args());
-
-    if let Some(log_level) = &log_level {
-        command.env("RUST_LOG", log_level);
-    }
-
-    if !features_arg.trim().is_empty() {
-        command.arg("--features");
-        command.arg(features_arg);
-    }
-
-    if features.no_default_features {
-        command.arg("--no-default-features");
-    }
-
-    if features.all_features {
-        command.arg("--all-features");
-    }
-
-    for arg in flags.split_ascii_whitespace() {
-        command.arg(arg);
-    }
-
-    if let Some(target) = target {
-        command.arg("--target");
-        command.arg(target);
-    }
+    let mut command = cargo.into_command();
 
     let command_str = format!("{command:?}");
     eprintln!(
@@ -407,15 +357,21 @@ fn compute_codegen(
     package_manifest_path: &Path,
     symbols: &[String],
     lib_name: &str,
-    path: Option<String>,
-    dot: Option<String>,
+    path: Option<&Path>,
+    dot: Option<&Path>,
 ) -> eyre::Result<String> {
     use proc_macro2::{Ident, Span, TokenStream};
     let lib_name_ident = Ident::new(lib_name, Span::call_site());
 
+    let str_from_path = |name: &str, path: &Path| {
+        path.to_str().map(|s| s.to_owned()).ok_or_else(|| {
+            let err_str = path.to_string_lossy();
+            eyre!("{name} path is not UTF8: {err_str}")
+        })
+    };
+
     let inputs = {
-        let control_file_path =
-            control_file_path.to_str().expect(".control file filename should be valid UTF8");
+        let control_file_path = str_from_path(".control file", control_file_path)?;
         let mut out = quote::quote! {
             // call the marker.  Primarily this ensures that rustc will actually link to the library
             // during the "pgrx_embed" build initiated by `cargo-pgrx schema` generation
@@ -454,6 +410,7 @@ fn compute_codegen(
     let outputs = {
         let mut out = TokenStream::new();
         if let Some(path) = path {
+            let path = str_from_path("out", path)?;
             let writing = "     Writing".bold().green().to_string();
             out.extend(quote::quote! {
                 eprintln!("{} SQL entities to {}", #writing, #path);
@@ -471,6 +428,7 @@ fn compute_codegen(
             });
         }
         if let Some(dot) = dot {
+            let dot = str_from_path("dot", dot)?;
             out.extend(quote::quote! {
                 pgrx_sql
                     .to_dot(#dot)
@@ -491,54 +449,17 @@ fn compute_codegen(
 }
 
 fn second_build(
-    user_manifest_path: Option<&Path>,
-    features: &clap_cargo::Features,
-    log_level: Option<String>,
+    cargo: Cargo,
     features_arg: &str,
-    flags: &str,
     embed_path: &Path,
-    package_name: &str,
     manifest: &Manifest,
 ) -> eyre::Result<()> {
-    let mut command = crate::cargo::cargo();
-    command.stdin(Stdio::null());
-    command.stdout(Stdio::null());
-    command.stderr(Stdio::inherit());
-
     // We do pass cfg to the binary and do not pass cfg to dependencies to avoid recompilation
     // The only cargo command respecting our need is `cargo rustc`
-    command.arg("rustc");
-    command.arg("--bin");
-    command.arg(pgrx_embed_name(manifest)?);
-
-    command.arg("--package");
-    command.arg(package_name);
-
-    if let Some(user_manifest_path) = user_manifest_path.as_ref() {
-        command.arg("--manifest-path");
-        command.arg(user_manifest_path);
-    }
-
-    if let Some(log_level) = &log_level {
-        command.env("RUST_LOG", log_level);
-    }
-
-    if !features_arg.trim().is_empty() {
-        command.arg("--features");
-        command.arg(features_arg);
-    }
-
-    if features.no_default_features {
-        command.arg("--no-default-features");
-    }
-
-    if features.all_features {
-        command.arg("--all-features");
-    }
-
-    for arg in flags.split_ascii_whitespace() {
-        command.arg(arg);
-    }
+    let mut command = cargo
+        .subcommand("rustc")
+        .flag_args("--bin", vec![pgrx_embed_name(manifest)?])
+        .into_command();
 
     command.arg("--");
 
@@ -622,6 +543,7 @@ fn parse_object(data: &[u8]) -> object::Result<object::File<'_>> {
 
     match kind {
         object::FileKind::MachOFat32 => {
+            // FIXME: properly parse the target tuple per https://github.com/pgcentralfoundation/pgrx/issues/2183
             let arch = std::env::consts::ARCH;
 
             match slice_arch32(data, arch) {
