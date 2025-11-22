@@ -1,4 +1,8 @@
 //! Memory Contexts in PostgreSQL, now with lifetimes.
+use pgrx_sql_entity_graph::metadata::{
+    ArgumentError, Returns, ReturnsError, SqlMapping, SqlTranslatable,
+};
+
 // "Why isn't this pgrx::mem or pgrx::memcxt?"
 // Postgres actually uses all of:
 // - mcxt
@@ -6,10 +10,13 @@
 // - mctx
 // Search engines will see "memc[tx]{2}" and assume you mean memcpy!
 // And it's nice-ish to have shorter lifetime names and have 'mcx consistently mean the lifetime.
+use crate::callconv::{Arg, ArgAbi};
+use crate::nullable::Nullable;
 use crate::pg_sys;
 use core::{marker::PhantomData, ptr::NonNull};
 
 /// A borrowed memory context.
+#[repr(transparent)]
 pub struct MemCx<'mcx> {
     ptr: NonNull<pg_sys::MemoryContextData>,
     _marker: PhantomData<&'mcx pg_sys::MemoryContextData>,
@@ -116,5 +123,40 @@ mod nightly {
                 Ok(NonNull::new_unchecked(slice))
             }
         }
+    }
+}
+
+unsafe impl<'fcx> ArgAbi<'fcx> for &MemCx<'fcx> {
+    unsafe fn unbox_arg_unchecked(_arg: Arg<'_, 'fcx>) -> Self {
+        // SAFETY: We are called to unbox an argument, which means the backend was initialized.
+        // We use this horrific expression to allow the lifetime to be extended arbitrarily
+        // and achieve an "in-place" transformation of CurrentMemoryContext's pointer.
+        // The soundness of this is riding on the lifetimes used for `unbox_arg_unchecked` in our macros,
+        // as the expanded code is designed so that `fcinfo` and each `arg` are truly "borrowed" in rustc's eyes.
+        unsafe { &*((&raw mut pg_sys::CurrentMemoryContext).cast()) }
+    }
+
+    unsafe fn unbox_nullable_arg(arg: Arg<'_, 'fcx>) -> Nullable<Self> {
+        // SAFETY: Should never happen in actuality, but as long as we're here...
+        if unsafe { pg_sys::CurrentMemoryContext.is_null() } {
+            Nullable::Null
+        } else {
+            Nullable::Valid(Self::unbox_arg_unchecked(arg))
+        }
+    }
+
+    fn is_virtual_arg() -> bool {
+        true
+    }
+}
+
+/// SAFETY: virtual argument
+unsafe impl<'mcx> SqlTranslatable for &MemCx<'mcx> {
+    fn argument_sql() -> Result<SqlMapping, ArgumentError> {
+        Ok(SqlMapping::Skip)
+    }
+
+    fn return_sql() -> Result<Returns, ReturnsError> {
+        Ok(Returns::One(SqlMapping::Skip))
     }
 }

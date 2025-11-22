@@ -14,6 +14,8 @@ mod tests {
     use crate as pgrx_tests;
 
     use pgrx::PgMemoryContexts;
+    use pgrx::memcx::MemCx;
+    use pgrx::palloc::PBox;
     use pgrx::pg_test;
     use pgrx::prelude::*;
     use std::sync::Arc;
@@ -27,6 +29,15 @@ mod tests {
         fn drop(&mut self) {
             self.did_drop.store(true, Ordering::SeqCst);
         }
+    }
+
+    #[pg_extern]
+    pub fn accept_mcx_return_timetz<'mcx>(
+        memcx: &'mcx MemCx<'mcx>,
+    ) -> PBox<'mcx, TimeWithTimeZone> {
+        let palloc = memcx.alloc_bytes(size_of::<TimeWithTimeZone>());
+        let timetz = TimeWithTimeZone::new(4, 20, 0.0).unwrap();
+        PBox::new_in(timetz, memcx)
     }
 
     #[pg_test]
