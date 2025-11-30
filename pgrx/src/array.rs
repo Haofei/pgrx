@@ -8,18 +8,31 @@
 //LICENSE
 //LICENSE Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 #![allow(clippy::precedence)]
-use crate::datum::Array;
+#![allow(unused)]
+#![deny(unsafe_op_in_unsafe_fn)]
+use crate::datum::{Array, BorrowDatum, Datum};
+use crate::layout::{Align, Layout};
+use crate::memcx::MemCx;
+use crate::nullable::Nullable;
+use crate::palloc::PBox;
+use crate::pgrx_sql_entity_graph::metadata::{
+    ArgumentError, Returns, ReturnsError, SqlMapping, SqlTranslatable,
+};
 use crate::toast::{Toast, Toasty};
 use crate::{layout, pg_sys, varlena};
-use bitvec::ptr::{self as bitptr, BitPtr, BitPtrError, Mut};
-use bitvec::slice::BitSlice;
+use bitvec::ptr::{self as bitptr, BitPtr, BitPtrError, Const, Mut};
+use bitvec::slice::{self as bitslice, BitSlice};
+use core::iter::{ExactSizeIterator, FusedIterator};
+use core::marker::PhantomData;
 use core::ptr::{self, NonNull};
-use core::slice;
+use core::{ffi, mem, slice};
 
 mod element;
+mod flat_array;
 mod port;
 
 pub use element::Element;
+pub use flat_array::{ArrayAllocError, FlatArray};
 
 /**
 An aligned, dereferenceable `NonNull<ArrayType>` with low-level accessors.
@@ -165,8 +178,7 @@ impl RawArray {
         }
     }
 
-    /**
-    A slice of the dimensions.
+    /** A slice describing the array's dimensions.
 
     Oxidized form of [ARR_DIMS(ArrayType*)][ARR_DIMS].
     The length will be within 0..=[pg_sys::MAXDIM].
@@ -189,6 +201,7 @@ impl RawArray {
     }
 
     /// The flattened length of the array over every single element.
+    ///
     /// Includes all items, even the ones that might be null.
     ///
     /// # Panics
@@ -229,8 +242,7 @@ impl RawArray {
         // This field is an "int32" in Postgres
     }
 
-    /**
-    Equivalent to [ARR_HASNULL(ArrayType*)][ARR_HASNULL].
+    /** Equivalent to [ARR_HASNULL(ArrayType*)][ARR_HASNULL].
 
     Note this means that it only asserts that there MIGHT be a null
 
@@ -250,16 +262,26 @@ impl RawArray {
     }
 
     #[inline]
-    fn nulls_bitptr(&mut self) -> Option<BitPtr<Mut, u8>> {
-        match BitPtr::try_from(self.nulls_mut_ptr()) {
+    fn nulls_bitptr(&self) -> Option<BitPtr<Const, u8>> {
+        let nulls_ptr = unsafe { port::ARR_NULLBITMAP(self.ptr.as_ptr()) }.cast_const();
+        match BitPtr::try_from(nulls_ptr) {
             Ok(ptr) => Some(ptr),
             Err(BitPtrError::Null(_)) => None,
-            Err(BitPtrError::Misaligned(_)) => unreachable!("impossible to misalign *mut u8"),
+            Err(BitPtrError::Misaligned(_)) => unreachable!(),
         }
     }
 
-    /**
-    Oxidized form of [ARR_NULLBITMAP(ArrayType*)][ARR_NULLBITMAP]
+    #[inline]
+    fn nulls_mut_bitptr(&mut self) -> Option<BitPtr<Mut, u8>> {
+        let nulls_ptr = unsafe { port::ARR_NULLBITMAP(self.ptr.as_ptr()) };
+        match BitPtr::try_from(self.nulls_mut_ptr()) {
+            Ok(ptr) => Some(ptr),
+            Err(BitPtrError::Null(_)) => None,
+            Err(BitPtrError::Misaligned(_)) => unreachable!(),
+        }
+    }
+
+    /** Oxidized form of [ARR_NULLBITMAP(ArrayType*)][ARR_NULLBITMAP]
 
     If this returns None, the array cannot have nulls.
     If this returns Some, it points to the bitslice that marks nulls in this array.
@@ -278,8 +300,8 @@ impl RawArray {
         NonNull::new(ptr::slice_from_raw_parts_mut(self.nulls_mut_ptr(), len))
     }
 
-    /**
-    The [bitvec] equivalent of [RawArray::nulls].
+    /** The [bitvec] equivalent of [RawArray::nulls].
+
     If this returns `None`, the array cannot have nulls.
     If this returns `Some`, it points to the bitslice that marks nulls in this array.
 
@@ -291,23 +313,21 @@ impl RawArray {
     [ARR_NULLBITMAP]: <https://git.postgresql.org/gitweb/?p=postgresql.git;a=blob;f=src/include/utils/array.h;h=4ae6c3be2f8b57afa38c19af2779f67c782e4efc;hb=278273ccbad27a8834dfdf11895da9cd91de4114#l293>
     */
     pub fn nulls_bitslice(&mut self) -> Option<NonNull<BitSlice<u8>>> {
-        NonNull::new(bitptr::bitslice_from_raw_parts_mut(self.nulls_bitptr()?, self.len()))
+        NonNull::new(bitptr::bitslice_from_raw_parts_mut(self.nulls_mut_bitptr()?, self.len()))
     }
 
-    /**
-    Checks the array for any NULL values by assuming it is a proper varlena array,
+    /** Checks the array for any NULL values
 
     # Safety
-
     * This requires every index is valid to read or correctly marked as null.
+
     */
     pub unsafe fn any_nulls(&self) -> bool {
         // SAFETY: Caller asserted safety conditions.
         unsafe { pg_sys::array_contains_nulls(self.ptr.as_ptr()) }
     }
 
-    /**
-    Oxidized form of [ARR_DATA_PTR(ArrayType*)][ARR_DATA_PTR]
+    /** Oxidized form of [ARR_DATA_PTR(ArrayType*)][ARR_DATA_PTR]
 
     # Safety
 
@@ -395,7 +415,7 @@ impl Toasty for RawArray {
 ///
 /// This allows for it to be copied from a Rust slice to a Postgres array,
 /// and obtain a Rust slice from a Postgres array if it contains no nulls.
-pub unsafe trait Scalar: Sized + Copy {
+pub unsafe trait Scalar: Sized + Copy + Element {
     const OID: pg_sys::Oid;
 }
 
