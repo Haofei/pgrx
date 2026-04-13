@@ -11,7 +11,7 @@ use core::num::TryFromIntError;
 use pgrx_pg_sys::PgTryBuilder;
 use pgrx_pg_sys::errcodes::PgSqlErrorCode;
 use pgrx_sql_entity_graph::metadata::{
-    ArgumentError, Returns, ReturnsError, SqlMapping, SqlTranslatable,
+    ArgumentError, ReturnsError, ReturnsRef, SqlMappingRef, SqlTranslatable,
 };
 
 use super::datetime_support::{DateTimeParts, HasExtractableParts};
@@ -282,10 +282,10 @@ impl<'de> serde::Deserialize<'de> for Date {
 }
 
 unsafe impl SqlTranslatable for Date {
-    fn argument_sql() -> Result<SqlMapping, ArgumentError> {
-        Ok(SqlMapping::literal("date"))
-    }
-    fn return_sql() -> Result<Returns, ReturnsError> {
-        Ok(Returns::One(SqlMapping::literal("date")))
-    }
+    const TYPE_IDENT: &'static str = crate::pgrx_resolved_type!(Date);
+    const TYPE_ORIGIN: pgrx_sql_entity_graph::metadata::TypeOrigin =
+        pgrx_sql_entity_graph::metadata::TypeOrigin::External;
+    const ARGUMENT_SQL: Result<SqlMappingRef, ArgumentError> = Ok(SqlMappingRef::literal("date"));
+    const RETURN_SQL: Result<ReturnsRef, ReturnsError> =
+        Ok(ReturnsRef::One(SqlMappingRef::literal("date")));
 }

@@ -210,7 +210,7 @@ pub(crate) fn install_extension(
         };
         let filename = format!("{so_name}{so_suffix}");
 
-        let dest = pkglibdir.join(filename);
+        let dest = pkglibdir.join(&filename);
 
         // Remove the existing shared libraries if present. This is a workaround for an
         // issue highlighted by the following apple documentation:
@@ -295,7 +295,6 @@ fn copy_file(
 
     Ok(())
 }
-
 pub(crate) fn build_extension(
     user_manifest_path: Option<&Path>,
     user_package: Option<&str>,

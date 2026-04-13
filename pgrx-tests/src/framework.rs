@@ -315,7 +315,7 @@ fn install_extension() -> eyre::Result<()> {
 
     features.extend(cargo_test_args.features.iter().cloned());
 
-    let mut command = cargo_pgrx();
+    let mut command = cargo_pgrx()?;
     command
         .arg("install")
         .arg("--test")
@@ -881,11 +881,11 @@ fn get_pid_file() -> eyre::Result<PathBuf> {
 }
 
 #[inline]
-pub(crate) fn get_pg_dbname() -> &'static str {
+pub fn get_pg_dbname() -> &'static str {
     "pgrx_tests"
 }
 
-pub(crate) fn get_pg_user() -> String {
+pub fn get_pg_user() -> String {
     #[cfg(target_family = "unix")]
     let varname = "USER";
     #[cfg(target_os = "windows")]
@@ -989,21 +989,42 @@ fn get_cargo_args() -> Vec<String> {
     Vec::new()
 }
 
-// TODO: this would be a good place to insert a check invoking to see if
-// `cargo-pgrx` is a crate in the local workspace, and use it instead.
-fn cargo_pgrx() -> Command {
+fn cargo_pgrx() -> eyre::Result<Command> {
     fn var_path(s: &str) -> Option<PathBuf> {
         std::env::var_os(s).map(PathBuf::from)
     }
-    // Use `CARGO_PGRX` (set by `cargo-pgrx` on first run), then fall back to
-    // `cargo-pgrx` if it is on the path, then `$CARGO pgrx`
-    let cargo_pgrx = var_path("CARGO_PGRX")
-        .or_else(|| find_on_path("cargo-pgrx"))
-        .or_else(|| var_path("CARGO"))
-        .unwrap_or_else(|| "cargo".into());
-    let mut cmd = Command::new(cargo_pgrx);
-    cmd.arg("pgrx");
-    cmd
+
+    if let Some(cargo_pgrx) = var_path("CARGO_PGRX") {
+        let mut command = Command::new(cargo_pgrx);
+        command.arg("pgrx");
+        return Ok(command);
+    }
+
+    if let Some(command) = workspace_cargo_pgrx(var_path("CARGO"))? {
+        return Ok(command);
+    }
+
+    let cargo_pgrx =
+        find_on_path("cargo-pgrx").or_else(|| var_path("CARGO")).unwrap_or_else(|| "cargo".into());
+    let mut command = Command::new(cargo_pgrx);
+    command.arg("pgrx");
+    Ok(command)
+}
+
+fn workspace_cargo_pgrx(cargo: Option<PathBuf>) -> eyre::Result<Option<Command>> {
+    let workspace_root = match Path::new(env!("CARGO_MANIFEST_DIR")).parent() {
+        Some(path) => path,
+        None => return Ok(None),
+    };
+    let manifest_path = workspace_root.join("cargo-pgrx/Cargo.toml");
+
+    if !manifest_path.is_file() {
+        return Ok(None);
+    }
+
+    let mut command = Command::new(cargo.unwrap_or_else(|| "cargo".into()));
+    command.arg("run").arg("--manifest-path").arg(manifest_path).arg("--").arg("pgrx");
+    Ok(Some(command))
 }
 
 fn find_on_path(program: &str) -> Option<PathBuf> {
@@ -1024,6 +1045,91 @@ fn sudo_command<U: AsRef<OsStr>>(user: U) -> Command {
     sudo.arg("-u");
     sudo.arg(user);
     sudo
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env::consts::EXE_SUFFIX;
+    use std::ffi::OsString;
+    use tempfile::tempdir;
+
+    struct EnvGuard {
+        saved: Vec<(String, Option<OsString>)>,
+    }
+
+    impl EnvGuard {
+        fn apply(updates: &[(&str, Option<&OsStr>)]) -> Self {
+            let mut saved = Vec::with_capacity(updates.len());
+
+            for (key, value) in updates {
+                let key_string = (*key).to_string();
+                saved.push((key_string.clone(), std::env::var_os(key)));
+                match value {
+                    Some(value) => unsafe { std::env::set_var(&key_string, value) },
+                    None => unsafe { std::env::remove_var(&key_string) },
+                }
+            }
+
+            Self { saved }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            for (key, value) in self.saved.iter().rev() {
+                match value {
+                    Some(value) => unsafe { std::env::set_var(key, value) },
+                    None => unsafe { std::env::remove_var(key) },
+                }
+            }
+        }
+    }
+
+    fn command_args(command: &Command) -> Vec<OsString> {
+        command.get_args().map(|arg| arg.to_os_string()).collect()
+    }
+
+    #[test]
+    fn cargo_pgrx_prefers_explicit_override() {
+        let _env = EnvGuard::apply(&[
+            ("CARGO_PGRX", Some(OsStr::new("/tmp/cargo-pgrx-explicit"))),
+            ("CARGO", Some(OsStr::new("/tmp/cargo-bin"))),
+        ]);
+
+        let command = cargo_pgrx().expect("command selection should succeed");
+        assert_eq!(command.get_program(), OsStr::new("/tmp/cargo-pgrx-explicit"));
+        assert_eq!(command_args(&command), vec![OsString::from("pgrx")]);
+    }
+
+    #[test]
+    fn workspace_cargo_pgrx_runs_from_source_even_with_a_target_binary() {
+        let tempdir = tempdir().expect("tempdir");
+        let fake_binary = tempdir.path().join("debug").join(format!("cargo-pgrx{EXE_SUFFIX}"));
+        std::fs::create_dir_all(fake_binary.parent().expect("binary parent")).expect("create dir");
+        std::fs::write(&fake_binary, b"not a real binary").expect("write fake binary");
+
+        let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().expect("workspace");
+        let _env = EnvGuard::apply(&[
+            ("CARGO_PGRX", None),
+            ("CARGO_TARGET_DIR", Some(tempdir.path().as_os_str())),
+            ("CARGO", Some(OsStr::new("/tmp/cargo-bin"))),
+        ]);
+
+        let command = cargo_pgrx().expect("command selection should succeed");
+        assert_eq!(command.get_program(), OsStr::new("/tmp/cargo-bin"));
+        assert_eq!(command.get_current_dir(), None);
+        assert_eq!(
+            command_args(&command),
+            vec![
+                OsString::from("run"),
+                OsString::from("--manifest-path"),
+                workspace_root.join("cargo-pgrx/Cargo.toml").into_os_string(),
+                OsString::from("--"),
+                OsString::from("pgrx"),
+            ]
+        );
+    }
 }
 
 pub mod pipe {

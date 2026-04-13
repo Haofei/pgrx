@@ -37,7 +37,6 @@ fn only_superusers_can_truncate(pstmt: PgBox<pg_sys::PlannedStmt>) {
 }
 
 unsafe fn register_hooks() {
-
     //
     // Client Authentication hook
     //
@@ -111,7 +110,7 @@ unsafe fn register_hooks() {
     unsafe extern "C-unwind" fn process_utility_hook(
         pstmt: *mut pg_sys::PlannedStmt,
         query_string: *const i8,
-        context: u32,
+        context: pg_sys::ProcessUtilityContext::Type,
         params: *mut pg_sys::ParamListInfoData,
         query_env: *mut pg_sys::QueryEnvironment,
         dest: *mut pg_sys::DestReceiver,
@@ -147,7 +146,7 @@ unsafe fn register_hooks() {
         pstmt: *mut pg_sys::PlannedStmt,
         query_string: *const i8,
         read_only_tree: bool,
-        context: u32,
+        context: pg_sys::ProcessUtilityContext::Type,
         params: *mut pg_sys::ParamListInfoData,
         query_env: *mut pg_sys::QueryEnvironment,
         dest: *mut pg_sys::DestReceiver,

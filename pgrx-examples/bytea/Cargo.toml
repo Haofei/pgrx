@@ -15,11 +15,8 @@ edition = "2021"
 publish = false
 
 [lib]
-crate-type = ["cdylib", "lib"]
+crate-type = ["cdylib"]
 
-[[bin]]
-name = "pgrx_embed_bytea"
-path = "./src/bin/pgrx_embed.rs"
 
 [features]
 default = ["pg13"]
@@ -32,18 +29,8 @@ pg18 = ["pgrx/pg18", "pgrx-tests/pg18"]
 pg_test = []
 
 [dependencies]
-pgrx = { path = "../../pgrx", default-features = false }
+pgrx = { path = "../../pgrx" }
 libflate = "2.1.0"
 
 [dev-dependencies]
 pgrx-tests = { path = "../../pgrx-tests" }
-
-# uncomment these if compiling outside of 'pgrx'
-# [profile.dev]
-# panic = "unwind"
-
-# [profile.release]
-# panic = "unwind"
-# opt-level = 3
-# lto = "fat"
-# codegen-units = 1

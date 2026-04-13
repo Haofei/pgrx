@@ -15,11 +15,8 @@ edition = "2021"
 publish = false
 
 [lib]
-crate-type = ["cdylib", "lib"]
+crate-type = ["cdylib"]
 
-[[bin]]
-name = "pgrx_embed_nostd"
-path = "./src/bin/pgrx_embed.rs"
 
 [features]
 default = ["pg13"]
@@ -37,13 +34,3 @@ serde = "1.0"
 
 [dev-dependencies]
 pgrx-tests = { path = "../../pgrx-tests" }
-
-# uncomment these if compiling outside of 'pgrx'
-# [profile.dev]
-# panic = "unwind"
-
-# [profile.release]
-# panic = "unwind"
-# opt-level = 3
-# lto = "fat"
-# codegen-units = 1

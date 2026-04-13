@@ -15,11 +15,8 @@ edition = "2021"
 publish = false
 
 [lib]
-crate-type = ["cdylib", "lib"]
+crate-type = ["cdylib"]
 
-[[bin]]
-name = "pgrx_embed_benching"
-path = "./src/bin/pgrx_embed.rs"
 
 [features]
 default = ["pg13"]
@@ -33,7 +30,7 @@ pg_test = []
 pg_bench = ["dep:pgrx-bench"]
 
 [dependencies]
-pgrx = { path = "../../pgrx", default-features = false }
+pgrx = { path = "../../pgrx" }
 pgrx-bench = { path = "../../pgrx-bench", optional = true }
 
 [dev-dependencies]

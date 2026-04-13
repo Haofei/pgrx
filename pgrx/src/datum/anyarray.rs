@@ -10,7 +10,7 @@
 use super::ArrayIntoIterator;
 use crate::{AnyElement, Array, FromDatum, IntoDatum, pg_sys};
 use pgrx_sql_entity_graph::metadata::{
-    ArgumentError, Returns, ReturnsError, SqlMapping, SqlTranslatable,
+    ArgumentError, ReturnsError, ReturnsRef, SqlMappingRef, SqlTranslatable,
 };
 use std::iter::FusedIterator;
 
@@ -77,12 +77,13 @@ impl IntoDatum for AnyArray {
 }
 
 unsafe impl SqlTranslatable for AnyArray {
-    fn argument_sql() -> Result<SqlMapping, ArgumentError> {
-        Ok(SqlMapping::literal("anyarray"))
-    }
-    fn return_sql() -> Result<Returns, ReturnsError> {
-        Ok(Returns::One(SqlMapping::literal("anyarray")))
-    }
+    const TYPE_IDENT: &'static str = crate::pgrx_resolved_type!(AnyArray);
+    const TYPE_ORIGIN: pgrx_sql_entity_graph::metadata::TypeOrigin =
+        pgrx_sql_entity_graph::metadata::TypeOrigin::External;
+    const ARGUMENT_SQL: Result<SqlMappingRef, ArgumentError> =
+        Ok(SqlMappingRef::literal("anyarray"));
+    const RETURN_SQL: Result<ReturnsRef, ReturnsError> =
+        Ok(ReturnsRef::One(SqlMappingRef::literal("anyarray")));
 }
 
 impl<'a> IntoIterator for &'a AnyArray

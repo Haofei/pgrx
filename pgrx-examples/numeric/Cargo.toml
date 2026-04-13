@@ -16,11 +16,8 @@ publish = false
 rust-version = "1.58"
 
 [lib]
-crate-type = ["cdylib", "lib"]
+crate-type = ["cdylib"]
 
-[[bin]]
-name = "pgrx_embed_numeric"
-path = "./src/bin/pgrx_embed.rs"
 
 [features]
 default = ["pg13"]
@@ -33,17 +30,8 @@ pg18 = ["pgrx/pg18", "pgrx-tests/pg18"]
 pg_test = []
 
 [dependencies]
-pgrx = { path = "../../pgrx", default-features = false }
+pgrx = { path = "../../pgrx" }
 rand = "0.8.5"
 
 [dev-dependencies]
 pgrx-tests = { path = "../../pgrx-tests" }
-
-#[profile.dev]
-#panic = "unwind"
-#
-#[profile.release]
-#panic = "unwind"
-#opt-level = 3
-#lto = "fat"
-#codegen-units = 1
