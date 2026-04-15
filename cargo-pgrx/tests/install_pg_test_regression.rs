@@ -123,8 +123,7 @@ fn install_test_extension_handles_mid_stream_schema_sentinel() {
     // status would make it harder to distinguish "command ran" from "command
     // exercised the decoder path we care about."
     assert!(
-        stdout.contains("installing pgrx_unit_tests")
-            && stderr.contains("SQL entities:"),
+        stdout.contains("installing pgrx_unit_tests") && stderr.contains("SQL entities:"),
         "cargo-pgrx install --test succeeded but did not appear to run the expected install and schema-generation steps\nstdout:\n{stdout}\nstderr:\n{stderr}"
     );
 }
