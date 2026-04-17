@@ -182,18 +182,18 @@ pub const MAXIMUM_ALIGNOF: u32 = 8;
 pub const MEMSET_LOOP_LIMIT: u32 = 1024;
 pub const PACKAGE_BUGREPORT: &::core::ffi::CStr = c"pgsql-bugs@lists.postgresql.org";
 pub const PACKAGE_NAME: &::core::ffi::CStr = c"PostgreSQL";
-pub const PACKAGE_STRING: &::core::ffi::CStr = c"PostgreSQL 14.20";
+pub const PACKAGE_STRING: &::core::ffi::CStr = c"PostgreSQL 14.22";
 pub const PACKAGE_TARNAME: &::core::ffi::CStr = c"postgresql";
 pub const PACKAGE_URL: &::core::ffi::CStr = c"https://www.postgresql.org/";
-pub const PACKAGE_VERSION: &::core::ffi::CStr = c"14.20";
+pub const PACKAGE_VERSION: &::core::ffi::CStr = c"14.22";
 pub const PG_KRB_SRVNAM: &::core::ffi::CStr = c"postgres";
 pub const PG_MAJORVERSION: &::core::ffi::CStr = c"14";
 pub const PG_MAJORVERSION_NUM: u32 = 14;
-pub const PG_MINORVERSION_NUM: u32 = 20;
+pub const PG_MINORVERSION_NUM: u32 = 22;
 pub const PG_USE_STDBOOL: u32 = 1;
-pub const PG_VERSION: &::core::ffi::CStr = c"14.20";
-pub const PG_VERSION_NUM: u32 = 140020;
-pub const PG_VERSION_STR : & :: core :: ffi :: CStr = c"PostgreSQL 14.20 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 11.4.0-1ubuntu1~22.04.2) 11.4.0, 64-bit" ;
+pub const PG_VERSION: &::core::ffi::CStr = c"14.22";
+pub const PG_VERSION_NUM: u32 = 140022;
+pub const PG_VERSION_STR : & :: core :: ffi :: CStr = c"PostgreSQL 14.22 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0, 64-bit" ;
 pub const RELSEG_SIZE: u32 = 131072;
 pub const SIZEOF_BOOL: u32 = 1;
 pub const SIZEOF_LONG: u32 = 8;
@@ -251,7 +251,7 @@ pub const PG_BINARY_A: &::core::ffi::CStr = c"a";
 pub const PG_BINARY_R: &::core::ffi::CStr = c"r";
 pub const PG_BINARY_W: &::core::ffi::CStr = c"w";
 pub const PGINVALID_SOCKET: i32 = -1;
-pub const PG_BACKEND_VERSIONSTR: &::core::ffi::CStr = c"postgres (PostgreSQL) 14.20\n";
+pub const PG_BACKEND_VERSIONSTR: &::core::ffi::CStr = c"postgres (PostgreSQL) 14.22\n";
 pub const EXE: &::core::ffi::CStr = c"";
 pub const DEVNULL: &::core::ffi::CStr = c"/dev/null";
 pub const USE_REPL_SNPRINTF: u32 = 1;
@@ -31910,6 +31910,7 @@ pub mod SysCacheIdentifier {
     pub const TYPEOID: Type = 76;
     pub const USERMAPPINGOID: Type = 77;
     pub const USERMAPPINGUSERSERVER: Type = 78;
+    pub const EXTENSIONOID: Type = 79;
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -32416,7 +32417,17 @@ unsafe extern "C-unwind" {
         fmt: *const ::core::ffi::c_char,
         args: *mut __va_list_tag,
     ) -> usize;
+    #[link_name = "DatumGetFloat4__pgrx_cshim"]
+    pub fn DatumGetFloat4(X: Datum) -> float4;
+    #[link_name = "Float4GetDatum__pgrx_cshim"]
+    pub fn Float4GetDatum(X: float4) -> Datum;
+    #[link_name = "DatumGetFloat8__pgrx_cshim"]
+    pub fn DatumGetFloat8(X: Datum) -> float8;
+    #[link_name = "Float8GetDatum__pgrx_cshim"]
+    pub fn Float8GetDatum(X: float8) -> Datum;
     pub static mut no_such_variable: ::core::ffi::c_int;
+    #[link_name = "castNodeImpl__pgrx_cshim"]
+    pub fn castNodeImpl(type_: NodeTag, ptr: *mut ::core::ffi::c_void) -> *mut Node;
     pub fn outNode(str_: *mut StringInfoData, obj: *const ::core::ffi::c_void);
     pub fn outToken(str_: *mut StringInfoData, s: *const ::core::ffi::c_char);
     pub fn outBitmapset(str_: *mut StringInfoData, bms: *const Bitmapset);
@@ -32437,6 +32448,39 @@ unsafe extern "C-unwind" {
     pub fn readAttrNumberCols(numCols: ::core::ffi::c_int) -> *mut int16;
     pub fn copyObjectImpl(obj: *const ::core::ffi::c_void) -> *mut ::core::ffi::c_void;
     pub fn equal(a: *const ::core::ffi::c_void, b: *const ::core::ffi::c_void) -> bool;
+    #[link_name = "list_head__pgrx_cshim"]
+    pub fn list_head(l: *const List) -> *mut ListCell;
+    #[link_name = "list_tail__pgrx_cshim"]
+    pub fn list_tail(l: *const List) -> *mut ListCell;
+    #[link_name = "list_second_cell__pgrx_cshim"]
+    pub fn list_second_cell(l: *const List) -> *mut ListCell;
+    #[link_name = "list_length__pgrx_cshim"]
+    pub fn list_length(l: *const List) -> ::core::ffi::c_int;
+    #[link_name = "list_nth_cell__pgrx_cshim"]
+    pub fn list_nth_cell(list: *const List, n: ::core::ffi::c_int) -> *mut ListCell;
+    #[link_name = "list_last_cell__pgrx_cshim"]
+    pub fn list_last_cell(list: *const List) -> *mut ListCell;
+    #[link_name = "list_nth__pgrx_cshim"]
+    pub fn list_nth(list: *const List, n: ::core::ffi::c_int) -> *mut ::core::ffi::c_void;
+    #[link_name = "list_nth_int__pgrx_cshim"]
+    pub fn list_nth_int(list: *const List, n: ::core::ffi::c_int) -> ::core::ffi::c_int;
+    #[link_name = "list_nth_oid__pgrx_cshim"]
+    pub fn list_nth_oid(list: *const List, n: ::core::ffi::c_int) -> Oid;
+    #[link_name = "list_cell_number__pgrx_cshim"]
+    pub fn list_cell_number(l: *const List, c: *const ListCell) -> ::core::ffi::c_int;
+    #[link_name = "lnext__pgrx_cshim"]
+    pub fn lnext(l: *const List, c: *const ListCell) -> *mut ListCell;
+    #[link_name = "for_each_from_setup__pgrx_cshim"]
+    pub fn for_each_from_setup(lst: *const List, N: ::core::ffi::c_int) -> ForEachState;
+    #[link_name = "for_each_cell_setup__pgrx_cshim"]
+    pub fn for_each_cell_setup(lst: *const List, initcell: *const ListCell) -> ForEachState;
+    #[link_name = "for_both_cell_setup__pgrx_cshim"]
+    pub fn for_both_cell_setup(
+        list1: *const List,
+        initcell1: *const ListCell,
+        list2: *const List,
+        initcell2: *const ListCell,
+    ) -> ForBothCellState;
     pub fn list_make1_impl(t: NodeTag, datum1: ListCell) -> *mut List;
     pub fn list_make2_impl(t: NodeTag, datum1: ListCell, datum2: ListCell) -> *mut List;
     pub fn list_make3_impl(
@@ -32585,6 +32629,15 @@ unsafe extern "C-unwind" {
         iscombo: *mut bool,
     );
     pub fn HeapTupleGetUpdateXid(tuple: HeapTupleHeader) -> TransactionId;
+    #[link_name = "FullTransactionIdFromEpochAndXid__pgrx_cshim"]
+    pub fn FullTransactionIdFromEpochAndXid(epoch: uint32, xid: TransactionId)
+    -> FullTransactionId;
+    #[link_name = "FullTransactionIdFromU64__pgrx_cshim"]
+    pub fn FullTransactionIdFromU64(value: uint64) -> FullTransactionId;
+    #[link_name = "FullTransactionIdRetreat__pgrx_cshim"]
+    pub fn FullTransactionIdRetreat(dest: *mut FullTransactionId);
+    #[link_name = "FullTransactionIdAdvance__pgrx_cshim"]
+    pub fn FullTransactionIdAdvance(dest: *mut FullTransactionId);
     pub fn TransactionStartedDuringRecovery() -> bool;
     pub static mut ShmemVariableCache: VariableCache;
     pub fn TransactionIdDidCommit(transactionId: TransactionId) -> bool;
@@ -32624,6 +32677,16 @@ unsafe extern "C-unwind" {
     pub fn ForceTransactionIdLimitUpdate() -> bool;
     pub fn GetNewObjectId() -> Oid;
     pub fn AssertTransactionIdInAllowableRange(xid: TransactionId);
+    #[link_name = "ReadNextTransactionId__pgrx_cshim"]
+    pub fn ReadNextTransactionId() -> TransactionId;
+    #[link_name = "TransactionIdRetreatedBy__pgrx_cshim"]
+    pub fn TransactionIdRetreatedBy(xid: TransactionId, amount: uint32) -> TransactionId;
+    #[link_name = "TransactionIdOlder__pgrx_cshim"]
+    pub fn TransactionIdOlder(a: TransactionId, b: TransactionId) -> TransactionId;
+    #[link_name = "NormalTransactionIdOlder__pgrx_cshim"]
+    pub fn NormalTransactionIdOlder(a: TransactionId, b: TransactionId) -> TransactionId;
+    #[link_name = "FullTransactionIdNewer__pgrx_cshim"]
+    pub fn FullTransactionIdNewer(a: FullTransactionId, b: FullTransactionId) -> FullTransactionId;
     pub fn PageInit(page: Page, pageSize: Size, specialSize: Size);
     pub fn PageIsVerifiedExtended(
         page: Page,
@@ -32792,6 +32855,37 @@ unsafe extern "C-unwind" {
         lastAttNum: ::core::ffi::c_int,
     );
     pub fn slot_getsomeattrs_int(slot: *mut TupleTableSlot, attnum: ::core::ffi::c_int);
+    #[link_name = "slot_getsomeattrs__pgrx_cshim"]
+    pub fn slot_getsomeattrs(slot: *mut TupleTableSlot, attnum: ::core::ffi::c_int);
+    #[link_name = "slot_getallattrs__pgrx_cshim"]
+    pub fn slot_getallattrs(slot: *mut TupleTableSlot);
+    #[link_name = "slot_attisnull__pgrx_cshim"]
+    pub fn slot_attisnull(slot: *mut TupleTableSlot, attnum: ::core::ffi::c_int) -> bool;
+    #[link_name = "slot_getattr__pgrx_cshim"]
+    pub fn slot_getattr(
+        slot: *mut TupleTableSlot,
+        attnum: ::core::ffi::c_int,
+        isnull: *mut bool,
+    ) -> Datum;
+    #[link_name = "slot_getsysattr__pgrx_cshim"]
+    pub fn slot_getsysattr(
+        slot: *mut TupleTableSlot,
+        attnum: ::core::ffi::c_int,
+        isnull: *mut bool,
+    ) -> Datum;
+    #[link_name = "ExecClearTuple__pgrx_cshim"]
+    pub fn ExecClearTuple(slot: *mut TupleTableSlot) -> *mut TupleTableSlot;
+    #[link_name = "ExecMaterializeSlot__pgrx_cshim"]
+    pub fn ExecMaterializeSlot(slot: *mut TupleTableSlot);
+    #[link_name = "ExecCopySlotHeapTuple__pgrx_cshim"]
+    pub fn ExecCopySlotHeapTuple(slot: *mut TupleTableSlot) -> HeapTuple;
+    #[link_name = "ExecCopySlotMinimalTuple__pgrx_cshim"]
+    pub fn ExecCopySlotMinimalTuple(slot: *mut TupleTableSlot) -> MinimalTuple;
+    #[link_name = "ExecCopySlot__pgrx_cshim"]
+    pub fn ExecCopySlot(
+        dstslot: *mut TupleTableSlot,
+        srcslot: *mut TupleTableSlot,
+    ) -> *mut TupleTableSlot;
     pub fn bms_copy(a: *const Bitmapset) -> *mut Bitmapset;
     pub fn bms_equal(a: *const Bitmapset, b: *const Bitmapset) -> bool;
     pub fn bms_compare(a: *const Bitmapset, b: *const Bitmapset) -> ::core::ffi::c_int;
@@ -33202,6 +33296,62 @@ unsafe extern "C-unwind" {
     pub static mut needs_fmgr_hook: needs_fmgr_hook_type;
     pub static mut fmgr_hook: fmgr_hook_type;
     pub fn slist_delete(head: *mut slist_head, node: *mut slist_node);
+    #[link_name = "dlist_init__pgrx_cshim"]
+    pub fn dlist_init(head: *mut dlist_head);
+    #[link_name = "dlist_is_empty__pgrx_cshim"]
+    pub fn dlist_is_empty(head: *mut dlist_head) -> bool;
+    #[link_name = "dlist_push_head__pgrx_cshim"]
+    pub fn dlist_push_head(head: *mut dlist_head, node: *mut dlist_node);
+    #[link_name = "dlist_push_tail__pgrx_cshim"]
+    pub fn dlist_push_tail(head: *mut dlist_head, node: *mut dlist_node);
+    #[link_name = "dlist_insert_after__pgrx_cshim"]
+    pub fn dlist_insert_after(after: *mut dlist_node, node: *mut dlist_node);
+    #[link_name = "dlist_insert_before__pgrx_cshim"]
+    pub fn dlist_insert_before(before: *mut dlist_node, node: *mut dlist_node);
+    #[link_name = "dlist_delete__pgrx_cshim"]
+    pub fn dlist_delete(node: *mut dlist_node);
+    #[link_name = "dlist_pop_head_node__pgrx_cshim"]
+    pub fn dlist_pop_head_node(head: *mut dlist_head) -> *mut dlist_node;
+    #[link_name = "dlist_move_head__pgrx_cshim"]
+    pub fn dlist_move_head(head: *mut dlist_head, node: *mut dlist_node);
+    #[link_name = "dlist_move_tail__pgrx_cshim"]
+    pub fn dlist_move_tail(head: *mut dlist_head, node: *mut dlist_node);
+    #[link_name = "dlist_has_next__pgrx_cshim"]
+    pub fn dlist_has_next(head: *mut dlist_head, node: *mut dlist_node) -> bool;
+    #[link_name = "dlist_has_prev__pgrx_cshim"]
+    pub fn dlist_has_prev(head: *mut dlist_head, node: *mut dlist_node) -> bool;
+    #[link_name = "dlist_next_node__pgrx_cshim"]
+    pub fn dlist_next_node(head: *mut dlist_head, node: *mut dlist_node) -> *mut dlist_node;
+    #[link_name = "dlist_prev_node__pgrx_cshim"]
+    pub fn dlist_prev_node(head: *mut dlist_head, node: *mut dlist_node) -> *mut dlist_node;
+    #[link_name = "dlist_head_element_off__pgrx_cshim"]
+    pub fn dlist_head_element_off(head: *mut dlist_head, off: usize) -> *mut ::core::ffi::c_void;
+    #[link_name = "dlist_head_node__pgrx_cshim"]
+    pub fn dlist_head_node(head: *mut dlist_head) -> *mut dlist_node;
+    #[link_name = "dlist_tail_element_off__pgrx_cshim"]
+    pub fn dlist_tail_element_off(head: *mut dlist_head, off: usize) -> *mut ::core::ffi::c_void;
+    #[link_name = "dlist_tail_node__pgrx_cshim"]
+    pub fn dlist_tail_node(head: *mut dlist_head) -> *mut dlist_node;
+    #[link_name = "slist_init__pgrx_cshim"]
+    pub fn slist_init(head: *mut slist_head);
+    #[link_name = "slist_is_empty__pgrx_cshim"]
+    pub fn slist_is_empty(head: *mut slist_head) -> bool;
+    #[link_name = "slist_push_head__pgrx_cshim"]
+    pub fn slist_push_head(head: *mut slist_head, node: *mut slist_node);
+    #[link_name = "slist_insert_after__pgrx_cshim"]
+    pub fn slist_insert_after(after: *mut slist_node, node: *mut slist_node);
+    #[link_name = "slist_pop_head_node__pgrx_cshim"]
+    pub fn slist_pop_head_node(head: *mut slist_head) -> *mut slist_node;
+    #[link_name = "slist_has_next__pgrx_cshim"]
+    pub fn slist_has_next(head: *mut slist_head, node: *mut slist_node) -> bool;
+    #[link_name = "slist_next_node__pgrx_cshim"]
+    pub fn slist_next_node(head: *mut slist_head, node: *mut slist_node) -> *mut slist_node;
+    #[link_name = "slist_head_element_off__pgrx_cshim"]
+    pub fn slist_head_element_off(head: *mut slist_head, off: usize) -> *mut ::core::ffi::c_void;
+    #[link_name = "slist_head_node__pgrx_cshim"]
+    pub fn slist_head_node(head: *mut slist_head) -> *mut slist_node;
+    #[link_name = "slist_delete_current__pgrx_cshim"]
+    pub fn slist_delete_current(iter: *mut slist_mutable_iter);
     pub fn makeStringInfo() -> StringInfo;
     pub fn initStringInfo(str_: StringInfo);
     pub fn resetStringInfo(str_: StringInfo);
@@ -33245,6 +33395,132 @@ unsafe extern "C-unwind" {
         valueLen: ::core::ffi::c_int,
     ) -> *mut ::core::ffi::c_char;
     pub fn ParamsErrorCallback(arg: *mut ::core::ffi::c_void);
+    #[link_name = "pg_spin_delay_impl__pgrx_cshim"]
+    pub fn pg_spin_delay_impl();
+    #[link_name = "pg_atomic_test_set_flag_impl__pgrx_cshim"]
+    pub fn pg_atomic_test_set_flag_impl(ptr: *mut pg_atomic_flag) -> bool;
+    #[link_name = "pg_atomic_clear_flag_impl__pgrx_cshim"]
+    pub fn pg_atomic_clear_flag_impl(ptr: *mut pg_atomic_flag);
+    #[link_name = "pg_atomic_compare_exchange_u32_impl__pgrx_cshim"]
+    pub fn pg_atomic_compare_exchange_u32_impl(
+        ptr: *mut pg_atomic_uint32,
+        expected: *mut uint32,
+        newval: uint32,
+    ) -> bool;
+    #[link_name = "pg_atomic_fetch_add_u32_impl__pgrx_cshim"]
+    pub fn pg_atomic_fetch_add_u32_impl(ptr: *mut pg_atomic_uint32, add_: int32) -> uint32;
+    #[link_name = "pg_atomic_compare_exchange_u64_impl__pgrx_cshim"]
+    pub fn pg_atomic_compare_exchange_u64_impl(
+        ptr: *mut pg_atomic_uint64,
+        expected: *mut uint64,
+        newval: uint64,
+    ) -> bool;
+    #[link_name = "pg_atomic_fetch_add_u64_impl__pgrx_cshim"]
+    pub fn pg_atomic_fetch_add_u64_impl(ptr: *mut pg_atomic_uint64, add_: int64) -> uint64;
+    #[link_name = "pg_atomic_unlocked_test_flag_impl__pgrx_cshim"]
+    pub fn pg_atomic_unlocked_test_flag_impl(ptr: *mut pg_atomic_flag) -> bool;
+    #[link_name = "pg_atomic_init_flag_impl__pgrx_cshim"]
+    pub fn pg_atomic_init_flag_impl(ptr: *mut pg_atomic_flag);
+    #[link_name = "pg_atomic_fetch_sub_u32_impl__pgrx_cshim"]
+    pub fn pg_atomic_fetch_sub_u32_impl(ptr: *mut pg_atomic_uint32, sub_: int32) -> uint32;
+    #[link_name = "pg_atomic_fetch_and_u32_impl__pgrx_cshim"]
+    pub fn pg_atomic_fetch_and_u32_impl(ptr: *mut pg_atomic_uint32, and_: uint32) -> uint32;
+    #[link_name = "pg_atomic_fetch_or_u32_impl__pgrx_cshim"]
+    pub fn pg_atomic_fetch_or_u32_impl(ptr: *mut pg_atomic_uint32, or_: uint32) -> uint32;
+    #[link_name = "pg_atomic_fetch_sub_u64_impl__pgrx_cshim"]
+    pub fn pg_atomic_fetch_sub_u64_impl(ptr: *mut pg_atomic_uint64, sub_: int64) -> uint64;
+    #[link_name = "pg_atomic_fetch_and_u64_impl__pgrx_cshim"]
+    pub fn pg_atomic_fetch_and_u64_impl(ptr: *mut pg_atomic_uint64, and_: uint64) -> uint64;
+    #[link_name = "pg_atomic_fetch_or_u64_impl__pgrx_cshim"]
+    pub fn pg_atomic_fetch_or_u64_impl(ptr: *mut pg_atomic_uint64, or_: uint64) -> uint64;
+    #[link_name = "pg_atomic_read_u32_impl__pgrx_cshim"]
+    pub fn pg_atomic_read_u32_impl(ptr: *mut pg_atomic_uint32) -> uint32;
+    #[link_name = "pg_atomic_write_u32_impl__pgrx_cshim"]
+    pub fn pg_atomic_write_u32_impl(ptr: *mut pg_atomic_uint32, val: uint32);
+    #[link_name = "pg_atomic_unlocked_write_u32_impl__pgrx_cshim"]
+    pub fn pg_atomic_unlocked_write_u32_impl(ptr: *mut pg_atomic_uint32, val: uint32);
+    #[link_name = "pg_atomic_init_u32_impl__pgrx_cshim"]
+    pub fn pg_atomic_init_u32_impl(ptr: *mut pg_atomic_uint32, val_: uint32);
+    #[link_name = "pg_atomic_exchange_u32_impl__pgrx_cshim"]
+    pub fn pg_atomic_exchange_u32_impl(ptr: *mut pg_atomic_uint32, xchg_: uint32) -> uint32;
+    #[link_name = "pg_atomic_add_fetch_u32_impl__pgrx_cshim"]
+    pub fn pg_atomic_add_fetch_u32_impl(ptr: *mut pg_atomic_uint32, add_: int32) -> uint32;
+    #[link_name = "pg_atomic_sub_fetch_u32_impl__pgrx_cshim"]
+    pub fn pg_atomic_sub_fetch_u32_impl(ptr: *mut pg_atomic_uint32, sub_: int32) -> uint32;
+    #[link_name = "pg_atomic_exchange_u64_impl__pgrx_cshim"]
+    pub fn pg_atomic_exchange_u64_impl(ptr: *mut pg_atomic_uint64, xchg_: uint64) -> uint64;
+    #[link_name = "pg_atomic_write_u64_impl__pgrx_cshim"]
+    pub fn pg_atomic_write_u64_impl(ptr: *mut pg_atomic_uint64, val: uint64);
+    #[link_name = "pg_atomic_read_u64_impl__pgrx_cshim"]
+    pub fn pg_atomic_read_u64_impl(ptr: *mut pg_atomic_uint64) -> uint64;
+    #[link_name = "pg_atomic_init_u64_impl__pgrx_cshim"]
+    pub fn pg_atomic_init_u64_impl(ptr: *mut pg_atomic_uint64, val_: uint64);
+    #[link_name = "pg_atomic_add_fetch_u64_impl__pgrx_cshim"]
+    pub fn pg_atomic_add_fetch_u64_impl(ptr: *mut pg_atomic_uint64, add_: int64) -> uint64;
+    #[link_name = "pg_atomic_sub_fetch_u64_impl__pgrx_cshim"]
+    pub fn pg_atomic_sub_fetch_u64_impl(ptr: *mut pg_atomic_uint64, sub_: int64) -> uint64;
+    #[link_name = "pg_atomic_init_flag__pgrx_cshim"]
+    pub fn pg_atomic_init_flag(ptr: *mut pg_atomic_flag);
+    #[link_name = "pg_atomic_test_set_flag__pgrx_cshim"]
+    pub fn pg_atomic_test_set_flag(ptr: *mut pg_atomic_flag) -> bool;
+    #[link_name = "pg_atomic_unlocked_test_flag__pgrx_cshim"]
+    pub fn pg_atomic_unlocked_test_flag(ptr: *mut pg_atomic_flag) -> bool;
+    #[link_name = "pg_atomic_clear_flag__pgrx_cshim"]
+    pub fn pg_atomic_clear_flag(ptr: *mut pg_atomic_flag);
+    #[link_name = "pg_atomic_init_u32__pgrx_cshim"]
+    pub fn pg_atomic_init_u32(ptr: *mut pg_atomic_uint32, val: uint32);
+    #[link_name = "pg_atomic_read_u32__pgrx_cshim"]
+    pub fn pg_atomic_read_u32(ptr: *mut pg_atomic_uint32) -> uint32;
+    #[link_name = "pg_atomic_write_u32__pgrx_cshim"]
+    pub fn pg_atomic_write_u32(ptr: *mut pg_atomic_uint32, val: uint32);
+    #[link_name = "pg_atomic_unlocked_write_u32__pgrx_cshim"]
+    pub fn pg_atomic_unlocked_write_u32(ptr: *mut pg_atomic_uint32, val: uint32);
+    #[link_name = "pg_atomic_exchange_u32__pgrx_cshim"]
+    pub fn pg_atomic_exchange_u32(ptr: *mut pg_atomic_uint32, newval: uint32) -> uint32;
+    #[link_name = "pg_atomic_compare_exchange_u32__pgrx_cshim"]
+    pub fn pg_atomic_compare_exchange_u32(
+        ptr: *mut pg_atomic_uint32,
+        expected: *mut uint32,
+        newval: uint32,
+    ) -> bool;
+    #[link_name = "pg_atomic_fetch_add_u32__pgrx_cshim"]
+    pub fn pg_atomic_fetch_add_u32(ptr: *mut pg_atomic_uint32, add_: int32) -> uint32;
+    #[link_name = "pg_atomic_fetch_sub_u32__pgrx_cshim"]
+    pub fn pg_atomic_fetch_sub_u32(ptr: *mut pg_atomic_uint32, sub_: int32) -> uint32;
+    #[link_name = "pg_atomic_fetch_and_u32__pgrx_cshim"]
+    pub fn pg_atomic_fetch_and_u32(ptr: *mut pg_atomic_uint32, and_: uint32) -> uint32;
+    #[link_name = "pg_atomic_fetch_or_u32__pgrx_cshim"]
+    pub fn pg_atomic_fetch_or_u32(ptr: *mut pg_atomic_uint32, or_: uint32) -> uint32;
+    #[link_name = "pg_atomic_add_fetch_u32__pgrx_cshim"]
+    pub fn pg_atomic_add_fetch_u32(ptr: *mut pg_atomic_uint32, add_: int32) -> uint32;
+    #[link_name = "pg_atomic_sub_fetch_u32__pgrx_cshim"]
+    pub fn pg_atomic_sub_fetch_u32(ptr: *mut pg_atomic_uint32, sub_: int32) -> uint32;
+    #[link_name = "pg_atomic_init_u64__pgrx_cshim"]
+    pub fn pg_atomic_init_u64(ptr: *mut pg_atomic_uint64, val: uint64);
+    #[link_name = "pg_atomic_read_u64__pgrx_cshim"]
+    pub fn pg_atomic_read_u64(ptr: *mut pg_atomic_uint64) -> uint64;
+    #[link_name = "pg_atomic_write_u64__pgrx_cshim"]
+    pub fn pg_atomic_write_u64(ptr: *mut pg_atomic_uint64, val: uint64);
+    #[link_name = "pg_atomic_exchange_u64__pgrx_cshim"]
+    pub fn pg_atomic_exchange_u64(ptr: *mut pg_atomic_uint64, newval: uint64) -> uint64;
+    #[link_name = "pg_atomic_compare_exchange_u64__pgrx_cshim"]
+    pub fn pg_atomic_compare_exchange_u64(
+        ptr: *mut pg_atomic_uint64,
+        expected: *mut uint64,
+        newval: uint64,
+    ) -> bool;
+    #[link_name = "pg_atomic_fetch_add_u64__pgrx_cshim"]
+    pub fn pg_atomic_fetch_add_u64(ptr: *mut pg_atomic_uint64, add_: int64) -> uint64;
+    #[link_name = "pg_atomic_fetch_sub_u64__pgrx_cshim"]
+    pub fn pg_atomic_fetch_sub_u64(ptr: *mut pg_atomic_uint64, sub_: int64) -> uint64;
+    #[link_name = "pg_atomic_fetch_and_u64__pgrx_cshim"]
+    pub fn pg_atomic_fetch_and_u64(ptr: *mut pg_atomic_uint64, and_: uint64) -> uint64;
+    #[link_name = "pg_atomic_fetch_or_u64__pgrx_cshim"]
+    pub fn pg_atomic_fetch_or_u64(ptr: *mut pg_atomic_uint64, or_: uint64) -> uint64;
+    #[link_name = "pg_atomic_add_fetch_u64__pgrx_cshim"]
+    pub fn pg_atomic_add_fetch_u64(ptr: *mut pg_atomic_uint64, add_: int64) -> uint64;
+    #[link_name = "pg_atomic_sub_fetch_u64__pgrx_cshim"]
+    pub fn pg_atomic_sub_fetch_u64(ptr: *mut pg_atomic_uint64, sub_: int64) -> uint64;
     pub static mut dynamic_shared_memory_type: ::core::ffi::c_int;
     pub static mut min_dynamic_shared_memory: ::core::ffi::c_int;
     pub fn dsm_impl_op(
@@ -33339,6 +33615,10 @@ unsafe extern "C-unwind" {
     pub fn tbm_attach_shared_iterate(dsa: *mut dsa_area, dp: dsa_pointer)
     -> *mut TBMSharedIterator;
     pub fn tbm_calculate_entries(maxbytes: f64) -> ::core::ffi::c_long;
+    #[link_name = "tas__pgrx_cshim"]
+    pub fn tas(lock: *mut slock_t) -> ::core::ffi::c_int;
+    #[link_name = "spin_delay__pgrx_cshim"]
+    pub fn spin_delay();
     pub static mut dummy_spinlock: slock_t;
     pub fn s_lock(
         lock: *mut slock_t,
@@ -33349,6 +33629,13 @@ unsafe extern "C-unwind" {
     pub fn set_spins_per_delay(shared_spins_per_delay: ::core::ffi::c_int);
     pub fn update_spins_per_delay(shared_spins_per_delay: ::core::ffi::c_int)
     -> ::core::ffi::c_int;
+    #[link_name = "init_spin_delay__pgrx_cshim"]
+    pub fn init_spin_delay(
+        status: *mut SpinDelayStatus,
+        file: *const ::core::ffi::c_char,
+        line: ::core::ffi::c_int,
+        func: *const ::core::ffi::c_char,
+    );
     pub fn perform_spin_delay(status: *mut SpinDelayStatus);
     pub fn finish_spin_delay(status: *mut SpinDelayStatus);
     pub fn SpinlockSemas() -> ::core::ffi::c_int;
@@ -33619,6 +33906,7 @@ unsafe extern "C-unwind" {
         accessor: *mut SharedTuplestoreAccessor,
         meta_data: *mut ::core::ffi::c_void,
     ) -> MinimalTuple;
+    pub fn AssertCouldGetRelation();
     pub fn RelationIdGetRelation(relationId: Oid) -> Relation;
     pub fn RelationClose(relation: Relation);
     pub fn RelationGetFKeyList(relation: Relation) -> *mut List;
@@ -33690,6 +33978,22 @@ unsafe extern "C-unwind" {
     pub fn RelationCacheInitFileRemove();
     pub static mut criticalRelcachesBuilt: bool;
     pub static mut criticalSharedRelcachesBuilt: bool;
+    #[link_name = "ApplySortComparator__pgrx_cshim"]
+    pub fn ApplySortComparator(
+        datum1: Datum,
+        isNull1: bool,
+        datum2: Datum,
+        isNull2: bool,
+        ssup: SortSupport,
+    ) -> ::core::ffi::c_int;
+    #[link_name = "ApplySortAbbrevFullComparator__pgrx_cshim"]
+    pub fn ApplySortAbbrevFullComparator(
+        datum1: Datum,
+        isNull1: bool,
+        datum2: Datum,
+        isNull2: bool,
+        ssup: SortSupport,
+    ) -> ::core::ffi::c_int;
     pub fn PrepareSortSupportComparisonShim(cmpFunc: Oid, ssup: SortSupport);
     pub fn PrepareSortSupportFromOrderingOp(orderingOp: Oid, ssup: SortSupport);
     pub fn PrepareSortSupportFromIndexRel(indexRel: Relation, strategy: int16, ssup: SortSupport);
@@ -33868,11 +34172,33 @@ unsafe extern "C-unwind" {
     pub static pg_leftmost_one_pos: [uint8; 256usize];
     pub static pg_rightmost_one_pos: [uint8; 256usize];
     pub static pg_number_of_ones: [uint8; 256usize];
+    #[link_name = "pg_leftmost_one_pos32__pgrx_cshim"]
+    pub fn pg_leftmost_one_pos32(word: uint32) -> ::core::ffi::c_int;
+    #[link_name = "pg_leftmost_one_pos64__pgrx_cshim"]
+    pub fn pg_leftmost_one_pos64(word: uint64) -> ::core::ffi::c_int;
+    #[link_name = "pg_rightmost_one_pos32__pgrx_cshim"]
+    pub fn pg_rightmost_one_pos32(word: uint32) -> ::core::ffi::c_int;
+    #[link_name = "pg_rightmost_one_pos64__pgrx_cshim"]
+    pub fn pg_rightmost_one_pos64(word: uint64) -> ::core::ffi::c_int;
+    #[link_name = "pg_nextpower2_32__pgrx_cshim"]
+    pub fn pg_nextpower2_32(num: uint32) -> uint32;
+    #[link_name = "pg_nextpower2_64__pgrx_cshim"]
+    pub fn pg_nextpower2_64(num: uint64) -> uint64;
+    #[link_name = "pg_prevpower2_32__pgrx_cshim"]
+    pub fn pg_prevpower2_32(num: uint32) -> uint32;
+    #[link_name = "pg_prevpower2_64__pgrx_cshim"]
+    pub fn pg_prevpower2_64(num: uint64) -> uint64;
+    #[link_name = "pg_ceil_log2_32__pgrx_cshim"]
+    pub fn pg_ceil_log2_32(num: uint32) -> uint32;
+    #[link_name = "pg_ceil_log2_64__pgrx_cshim"]
+    pub fn pg_ceil_log2_64(num: uint64) -> uint64;
     pub static mut pg_popcount32:
         ::core::option::Option<unsafe extern "C-unwind" fn(word: uint32) -> ::core::ffi::c_int>;
     pub static mut pg_popcount64:
         ::core::option::Option<unsafe extern "C-unwind" fn(word: uint64) -> ::core::ffi::c_int>;
     pub fn pg_popcount(buf: *const ::core::ffi::c_char, bytes: ::core::ffi::c_int) -> uint64;
+    #[link_name = "pg_rotate_right32__pgrx_cshim"]
+    pub fn pg_rotate_right32(word: uint32, n: ::core::ffi::c_int) -> uint32;
     pub fn tuplehash_create(
         ctx: MemoryContext,
         nelements: uint32,
@@ -33911,6 +34237,14 @@ unsafe extern "C-unwind" {
         iter: *mut tuplehash_iterator,
     ) -> *mut TupleHashEntryData;
     pub fn tuplehash_stat(tb: *mut tuplehash_hash);
+    #[link_name = "SetQueryCompletion__pgrx_cshim"]
+    pub fn SetQueryCompletion(
+        qc: *mut QueryCompletion,
+        commandTag: CommandTag::Type,
+        nprocessed: uint64,
+    );
+    #[link_name = "CopyQueryCompletion__pgrx_cshim"]
+    pub fn CopyQueryCompletion(dst: *mut QueryCompletion, src: *const QueryCompletion);
     pub fn InitializeQueryCompletion(qc: *mut QueryCompletion);
     pub fn GetCommandTagName(commandTag: CommandTag::Type) -> *const ::core::ffi::c_char;
     pub fn command_tag_display_rowcount(commandTag: CommandTag::Type) -> bool;
@@ -34098,6 +34432,12 @@ unsafe extern "C-unwind" {
         junkfilter: *mut JunkFilter,
         slot: *mut TupleTableSlot,
     ) -> *mut TupleTableSlot;
+    #[link_name = "ExecGetJunkAttribute__pgrx_cshim"]
+    pub fn ExecGetJunkAttribute(
+        slot: *mut TupleTableSlot,
+        attno: AttrNumber,
+        isNull: *mut bool,
+    ) -> Datum;
     pub fn ExecutorStart(queryDesc: *mut QueryDesc, eflags: ::core::ffi::c_int);
     pub fn standard_ExecutorStart(queryDesc: *mut QueryDesc, eflags: ::core::ffi::c_int);
     pub fn ExecutorRun(
@@ -34207,6 +34547,8 @@ unsafe extern "C-unwind" {
     pub fn ExecEndNode(node: *mut PlanState);
     pub fn ExecShutdownNode(node: *mut PlanState) -> bool;
     pub fn ExecSetTupleBound(tuples_needed: int64, child_node: *mut PlanState);
+    #[link_name = "ExecProcNode__pgrx_cshim"]
+    pub fn ExecProcNode(node: *mut PlanState) -> *mut TupleTableSlot;
     pub fn ExecInitExpr(node: *mut Expr, parent: *mut PlanState) -> *mut ExprState;
     pub fn ExecInitExprWithParams(node: *mut Expr, ext_params: ParamListInfo) -> *mut ExprState;
     pub fn ExecInitQual(qual: *mut List, parent: *mut PlanState) -> *mut ExprState;
@@ -34259,6 +34601,24 @@ unsafe extern "C-unwind" {
     pub fn ExecPrepareQual(qual: *mut List, estate: *mut EState) -> *mut ExprState;
     pub fn ExecPrepareCheck(qual: *mut List, estate: *mut EState) -> *mut ExprState;
     pub fn ExecPrepareExprList(nodes: *mut List, estate: *mut EState) -> *mut List;
+    #[link_name = "ExecEvalExpr__pgrx_cshim"]
+    pub fn ExecEvalExpr(
+        state: *mut ExprState,
+        econtext: *mut ExprContext,
+        isNull: *mut bool,
+    ) -> Datum;
+    #[link_name = "ExecEvalExprSwitchContext__pgrx_cshim"]
+    pub fn ExecEvalExprSwitchContext(
+        state: *mut ExprState,
+        econtext: *mut ExprContext,
+        isNull: *mut bool,
+    ) -> Datum;
+    #[link_name = "ExecProject__pgrx_cshim"]
+    pub fn ExecProject(projInfo: *mut ProjectionInfo) -> *mut TupleTableSlot;
+    #[link_name = "ExecQual__pgrx_cshim"]
+    pub fn ExecQual(state: *mut ExprState, econtext: *mut ExprContext) -> bool;
+    #[link_name = "ExecQualAndReset__pgrx_cshim"]
+    pub fn ExecQualAndReset(state: *mut ExprState, econtext: *mut ExprContext) -> bool;
     pub fn ExecCheck(state: *mut ExprState, context: *mut ExprContext) -> bool;
     pub fn ExecInitTableFunctionResult(
         expr: *mut Expr,
@@ -34360,6 +34720,8 @@ unsafe extern "C-unwind" {
     pub fn ExecInitRangeTable(estate: *mut EState, rangeTable: *mut List);
     pub fn ExecCloseRangeTableRelations(estate: *mut EState);
     pub fn ExecCloseResultRelations(estate: *mut EState);
+    #[link_name = "exec_rt_fetch__pgrx_cshim"]
+    pub fn exec_rt_fetch(rti: Index, estate: *mut EState) -> *mut RangeTblEntry;
     pub fn ExecGetRangeTableRelation(estate: *mut EState, rti: Index) -> Relation;
     pub fn ExecInitResultRelation(
         estate: *mut EState,
@@ -34744,6 +35106,8 @@ unsafe extern "C-unwind" {
         val: *const int64,
     );
     pub fn pgstat_progress_end_command();
+    #[link_name = "is_unixsock_path__pgrx_cshim"]
+    pub fn is_unixsock_path(path: *const ::core::ffi::c_char) -> bool;
     pub static mut Db_user_namespace: bool;
     pub static mut pgstat_track_activities: bool;
     pub static mut pgstat_track_activity_query_size: ::core::ffi::c_int;
@@ -34776,6 +35140,10 @@ unsafe extern "C-unwind" {
     ) -> *mut ::core::ffi::c_char;
     pub fn pgstat_get_wait_event(wait_event_info: uint32) -> *const ::core::ffi::c_char;
     pub fn pgstat_get_wait_event_type(wait_event_info: uint32) -> *const ::core::ffi::c_char;
+    #[link_name = "pgstat_report_wait_start__pgrx_cshim"]
+    pub fn pgstat_report_wait_start(wait_event_info: uint32);
+    #[link_name = "pgstat_report_wait_end__pgrx_cshim"]
+    pub fn pgstat_report_wait_end();
     pub fn pgstat_set_wait_event_storage(wait_event_info: *mut uint32);
     pub fn pgstat_reset_wait_event_storage();
     pub static mut my_wait_event_info: *mut uint32;
@@ -35466,6 +35834,8 @@ unsafe extern "C-unwind" {
     );
     pub fn smgrimmedsync(reln: SMgrRelation, forknum: ForkNumber::Type);
     pub fn AtEOXact_SMgr();
+    #[link_name = "RelationGetSmgr__pgrx_cshim"]
+    pub fn RelationGetSmgr(rel: Relation) -> SMgrRelation;
     pub fn RelationIncrementReferenceCount(rel: Relation);
     pub fn RelationDecrementReferenceCount(rel: Relation);
     pub fn GenericXLogStart(relation: Relation) -> *mut GenericXLogState;
@@ -35484,6 +35854,10 @@ unsafe extern "C-unwind" {
     pub static mut gin_pending_list_limit: ::core::ffi::c_int;
     pub fn ginGetStats(index: Relation, stats: *mut GinStatsData);
     pub fn ginUpdateStats(index: Relation, stats: *const GinStatsData, is_build: bool);
+    #[link_name = "GistPageSetDeleted__pgrx_cshim"]
+    pub fn GistPageSetDeleted(page: Page, deletexid: FullTransactionId);
+    #[link_name = "GistPageGetDeleteXid__pgrx_cshim"]
+    pub fn GistPageGetDeleteXid(page: Page) -> FullTransactionId;
     pub fn relation_open(relationId: Oid, lockmode: LOCKMODE) -> Relation;
     pub fn try_relation_open(relationId: Oid, lockmode: LOCKMODE) -> Relation;
     pub fn relation_openrv(relation: *const RangeVar, lockmode: LOCKMODE) -> Relation;
@@ -35757,6 +36131,11 @@ unsafe extern "C-unwind" {
         elmbyval: bool,
         elmalign: ::core::ffi::c_char,
     ) -> *mut ArrayType;
+    pub fn construct_array_builtin(
+        elems: *mut Datum,
+        nelems: ::core::ffi::c_int,
+        elmtype: Oid,
+    ) -> *mut ArrayType;
     pub fn construct_md_array(
         elems: *mut Datum,
         nulls: *mut bool,
@@ -35780,6 +36159,13 @@ unsafe extern "C-unwind" {
         elmlen: ::core::ffi::c_int,
         elmbyval: bool,
         elmalign: ::core::ffi::c_char,
+        elemsp: *mut *mut Datum,
+        nullsp: *mut *mut bool,
+        nelemsp: *mut ::core::ffi::c_int,
+    );
+    pub fn deconstruct_array_builtin(
+        array: *mut ArrayType,
+        elmtype: Oid,
         elemsp: *mut *mut Datum,
         nullsp: *mut *mut bool,
         nelemsp: *mut ::core::ffi::c_int,
@@ -36165,12 +36551,82 @@ unsafe extern "C-unwind" {
     pub static mut synchronize_seqscans: bool;
     pub fn table_slot_callbacks(rel: Relation) -> *const TupleTableSlotOps;
     pub fn table_slot_create(rel: Relation, reglist: *mut *mut List) -> *mut TupleTableSlot;
+    #[link_name = "table_beginscan__pgrx_cshim"]
+    pub fn table_beginscan(
+        rel: Relation,
+        snapshot: Snapshot,
+        nkeys: ::core::ffi::c_int,
+        key: *mut ScanKeyData,
+    ) -> TableScanDesc;
     pub fn table_beginscan_catalog(
         rel: Relation,
         nkeys: ::core::ffi::c_int,
         key: *mut ScanKeyData,
     ) -> TableScanDesc;
+    #[link_name = "table_beginscan_strat__pgrx_cshim"]
+    pub fn table_beginscan_strat(
+        rel: Relation,
+        snapshot: Snapshot,
+        nkeys: ::core::ffi::c_int,
+        key: *mut ScanKeyData,
+        allow_strat: bool,
+        allow_sync: bool,
+    ) -> TableScanDesc;
+    #[link_name = "table_beginscan_bm__pgrx_cshim"]
+    pub fn table_beginscan_bm(
+        rel: Relation,
+        snapshot: Snapshot,
+        nkeys: ::core::ffi::c_int,
+        key: *mut ScanKeyData,
+    ) -> TableScanDesc;
+    #[link_name = "table_beginscan_sampling__pgrx_cshim"]
+    pub fn table_beginscan_sampling(
+        rel: Relation,
+        snapshot: Snapshot,
+        nkeys: ::core::ffi::c_int,
+        key: *mut ScanKeyData,
+        allow_strat: bool,
+        allow_sync: bool,
+        allow_pagemode: bool,
+    ) -> TableScanDesc;
+    #[link_name = "table_beginscan_tid__pgrx_cshim"]
+    pub fn table_beginscan_tid(rel: Relation, snapshot: Snapshot) -> TableScanDesc;
+    #[link_name = "table_beginscan_analyze__pgrx_cshim"]
+    pub fn table_beginscan_analyze(rel: Relation) -> TableScanDesc;
+    #[link_name = "table_endscan__pgrx_cshim"]
+    pub fn table_endscan(scan: TableScanDesc);
+    #[link_name = "table_rescan__pgrx_cshim"]
+    pub fn table_rescan(scan: TableScanDesc, key: *mut ScanKeyData);
+    #[link_name = "table_rescan_set_params__pgrx_cshim"]
+    pub fn table_rescan_set_params(
+        scan: TableScanDesc,
+        key: *mut ScanKeyData,
+        allow_strat: bool,
+        allow_sync: bool,
+        allow_pagemode: bool,
+    );
     pub fn table_scan_update_snapshot(scan: TableScanDesc, snapshot: Snapshot);
+    #[link_name = "table_scan_getnextslot__pgrx_cshim"]
+    pub fn table_scan_getnextslot(
+        sscan: TableScanDesc,
+        direction: ScanDirection::Type,
+        slot: *mut TupleTableSlot,
+    ) -> bool;
+    #[link_name = "table_beginscan_tidrange__pgrx_cshim"]
+    pub fn table_beginscan_tidrange(
+        rel: Relation,
+        snapshot: Snapshot,
+        mintid: ItemPointer,
+        maxtid: ItemPointer,
+    ) -> TableScanDesc;
+    #[link_name = "table_rescan_tidrange__pgrx_cshim"]
+    pub fn table_rescan_tidrange(sscan: TableScanDesc, mintid: ItemPointer, maxtid: ItemPointer);
+    #[link_name = "table_scan_getnextslot_tidrange__pgrx_cshim"]
+    pub fn table_scan_getnextslot_tidrange(
+        sscan: TableScanDesc,
+        direction: ScanDirection::Type,
+        slot: *mut TupleTableSlot,
+    ) -> bool;
     pub fn table_parallelscan_estimate(rel: Relation, snapshot: Snapshot) -> Size;
     pub fn table_parallelscan_initialize(
         rel: Relation,
@@ -36178,13 +36634,242 @@ unsafe extern "C-unwind" {
         snapshot: Snapshot,
     );
     pub fn table_beginscan_parallel(rel: Relation, pscan: ParallelTableScanDesc) -> TableScanDesc;
+    #[link_name = "table_parallelscan_reinitialize__pgrx_cshim"]
+    pub fn table_parallelscan_reinitialize(rel: Relation, pscan: ParallelTableScanDesc);
+    #[link_name = "table_index_fetch_begin__pgrx_cshim"]
+    pub fn table_index_fetch_begin(rel: Relation) -> *mut IndexFetchTableData;
+    #[link_name = "table_index_fetch_reset__pgrx_cshim"]
+    pub fn table_index_fetch_reset(scan: *mut IndexFetchTableData);
+    #[link_name = "table_index_fetch_end__pgrx_cshim"]
+    pub fn table_index_fetch_end(scan: *mut IndexFetchTableData);
+    #[link_name = "table_index_fetch_tuple__pgrx_cshim"]
+    pub fn table_index_fetch_tuple(
+        scan: *mut IndexFetchTableData,
+        tid: ItemPointer,
+        snapshot: Snapshot,
+        slot: *mut TupleTableSlot,
+        call_again: *mut bool,
+        all_dead: *mut bool,
+    ) -> bool;
     pub fn table_index_fetch_tuple_check(
         rel: Relation,
         tid: ItemPointer,
         snapshot: Snapshot,
         all_dead: *mut bool,
     ) -> bool;
+    #[link_name = "table_tuple_fetch_row_version__pgrx_cshim"]
+    pub fn table_tuple_fetch_row_version(
+        rel: Relation,
+        tid: ItemPointer,
+        snapshot: Snapshot,
+        slot: *mut TupleTableSlot,
+    ) -> bool;
+    #[link_name = "table_tuple_tid_valid__pgrx_cshim"]
+    pub fn table_tuple_tid_valid(scan: TableScanDesc, tid: ItemPointer) -> bool;
     pub fn table_tuple_get_latest_tid(scan: TableScanDesc, tid: ItemPointer);
+    #[link_name = "table_tuple_satisfies_snapshot__pgrx_cshim"]
+    pub fn table_tuple_satisfies_snapshot(
+        rel: Relation,
+        slot: *mut TupleTableSlot,
+        snapshot: Snapshot,
+    ) -> bool;
+    #[link_name = "table_index_delete_tuples__pgrx_cshim"]
+    pub fn table_index_delete_tuples(
+        rel: Relation,
+        delstate: *mut TM_IndexDeleteOp,
+    ) -> TransactionId;
+    #[link_name = "table_tuple_insert__pgrx_cshim"]
+    pub fn table_tuple_insert(
+        rel: Relation,
+        slot: *mut TupleTableSlot,
+        cid: CommandId,
+        options: ::core::ffi::c_int,
+        bistate: *mut BulkInsertStateData,
+    );
+    #[link_name = "table_tuple_insert_speculative__pgrx_cshim"]
+    pub fn table_tuple_insert_speculative(
+        rel: Relation,
+        slot: *mut TupleTableSlot,
+        cid: CommandId,
+        options: ::core::ffi::c_int,
+        bistate: *mut BulkInsertStateData,
+        specToken: uint32,
+    );
+    #[link_name = "table_tuple_complete_speculative__pgrx_cshim"]
+    pub fn table_tuple_complete_speculative(
+        rel: Relation,
+        slot: *mut TupleTableSlot,
+        specToken: uint32,
+        succeeded: bool,
+    );
+    #[link_name = "table_multi_insert__pgrx_cshim"]
+    pub fn table_multi_insert(
+        rel: Relation,
+        slots: *mut *mut TupleTableSlot,
+        nslots: ::core::ffi::c_int,
+        cid: CommandId,
+        options: ::core::ffi::c_int,
+        bistate: *mut BulkInsertStateData,
+    );
+    #[link_name = "table_tuple_delete__pgrx_cshim"]
+    pub fn table_tuple_delete(
+        rel: Relation,
+        tid: ItemPointer,
+        cid: CommandId,
+        snapshot: Snapshot,
+        crosscheck: Snapshot,
+        wait: bool,
+        tmfd: *mut TM_FailureData,
+        changingPart: bool,
+    ) -> TM_Result::Type;
+    #[link_name = "table_tuple_update__pgrx_cshim"]
+    pub fn table_tuple_update(
+        rel: Relation,
+        otid: ItemPointer,
+        slot: *mut TupleTableSlot,
+        cid: CommandId,
+        snapshot: Snapshot,
+        crosscheck: Snapshot,
+        wait: bool,
+        tmfd: *mut TM_FailureData,
+        lockmode: *mut LockTupleMode::Type,
+        update_indexes: *mut bool,
+    ) -> TM_Result::Type;
+    #[link_name = "table_tuple_lock__pgrx_cshim"]
+    pub fn table_tuple_lock(
+        rel: Relation,
+        tid: ItemPointer,
+        snapshot: Snapshot,
+        slot: *mut TupleTableSlot,
+        cid: CommandId,
+        mode: LockTupleMode::Type,
+        wait_policy: LockWaitPolicy::Type,
+        flags: uint8,
+        tmfd: *mut TM_FailureData,
+    ) -> TM_Result::Type;
+    #[link_name = "table_finish_bulk_insert__pgrx_cshim"]
+    pub fn table_finish_bulk_insert(rel: Relation, options: ::core::ffi::c_int);
+    #[link_name = "table_relation_set_new_filenode__pgrx_cshim"]
+    pub fn table_relation_set_new_filenode(
+        rel: Relation,
+        newrnode: *const RelFileNode,
+        persistence: ::core::ffi::c_char,
+        freezeXid: *mut TransactionId,
+        minmulti: *mut MultiXactId,
+    );
+    #[link_name = "table_relation_nontransactional_truncate__pgrx_cshim"]
+    pub fn table_relation_nontransactional_truncate(rel: Relation);
+    #[link_name = "table_relation_copy_data__pgrx_cshim"]
+    pub fn table_relation_copy_data(rel: Relation, newrnode: *const RelFileNode);
+    #[link_name = "table_relation_copy_for_cluster__pgrx_cshim"]
+    pub fn table_relation_copy_for_cluster(
+        OldTable: Relation,
+        NewTable: Relation,
+        OldIndex: Relation,
+        use_sort: bool,
+        OldestXmin: TransactionId,
+        xid_cutoff: *mut TransactionId,
+        multi_cutoff: *mut MultiXactId,
+        num_tuples: *mut f64,
+        tups_vacuumed: *mut f64,
+        tups_recently_dead: *mut f64,
+    );
+    #[link_name = "table_relation_vacuum__pgrx_cshim"]
+    pub fn table_relation_vacuum(
+        rel: Relation,
+        params: *mut VacuumParams,
+        bstrategy: BufferAccessStrategy,
+    );
+    #[link_name = "table_scan_analyze_next_block__pgrx_cshim"]
+    pub fn table_scan_analyze_next_block(
+        scan: TableScanDesc,
+        blockno: BlockNumber,
+        bstrategy: BufferAccessStrategy,
+    ) -> bool;
+    #[link_name = "table_scan_analyze_next_tuple__pgrx_cshim"]
+    pub fn table_scan_analyze_next_tuple(
+        scan: TableScanDesc,
+        OldestXmin: TransactionId,
+        liverows: *mut f64,
+        deadrows: *mut f64,
+        slot: *mut TupleTableSlot,
+    ) -> bool;
+    #[link_name = "table_index_build_scan__pgrx_cshim"]
+    pub fn table_index_build_scan(
+        table_rel: Relation,
+        index_rel: Relation,
+        index_info: *mut IndexInfo,
+        allow_sync: bool,
+        progress: bool,
+        callback: IndexBuildCallback,
+        callback_state: *mut ::core::ffi::c_void,
+        scan: TableScanDesc,
+    ) -> f64;
+    #[link_name = "table_index_build_range_scan__pgrx_cshim"]
+    pub fn table_index_build_range_scan(
+        table_rel: Relation,
+        index_rel: Relation,
+        index_info: *mut IndexInfo,
+        allow_sync: bool,
+        anyvisible: bool,
+        progress: bool,
+        start_blockno: BlockNumber,
+        numblocks: BlockNumber,
+        callback: IndexBuildCallback,
+        callback_state: *mut ::core::ffi::c_void,
+        scan: TableScanDesc,
+    ) -> f64;
+    #[link_name = "table_index_validate_scan__pgrx_cshim"]
+    pub fn table_index_validate_scan(
+        table_rel: Relation,
+        index_rel: Relation,
+        index_info: *mut IndexInfo,
+        snapshot: Snapshot,
+        state: *mut ValidateIndexState,
+    );
+    #[link_name = "table_relation_size__pgrx_cshim"]
+    pub fn table_relation_size(rel: Relation, forkNumber: ForkNumber::Type) -> uint64;
+    #[link_name = "table_relation_needs_toast_table__pgrx_cshim"]
+    pub fn table_relation_needs_toast_table(rel: Relation) -> bool;
+    #[link_name = "table_relation_toast_am__pgrx_cshim"]
+    pub fn table_relation_toast_am(rel: Relation) -> Oid;
+    #[link_name = "table_relation_fetch_toast_slice__pgrx_cshim"]
+    pub fn table_relation_fetch_toast_slice(
+        toastrel: Relation,
+        valueid: Oid,
+        attrsize: int32,
+        sliceoffset: int32,
+        slicelength: int32,
+        result: *mut varlena,
+    );
+    #[link_name = "table_relation_estimate_size__pgrx_cshim"]
+    pub fn table_relation_estimate_size(
+        rel: Relation,
+        attr_widths: *mut int32,
+        pages: *mut BlockNumber,
+        tuples: *mut f64,
+        allvisfrac: *mut f64,
+    );
+    #[link_name = "table_scan_bitmap_next_block__pgrx_cshim"]
+    pub fn table_scan_bitmap_next_block(scan: TableScanDesc, tbmres: *mut TBMIterateResult)
+    -> bool;
+    #[link_name = "table_scan_bitmap_next_tuple__pgrx_cshim"]
+    pub fn table_scan_bitmap_next_tuple(
+        scan: TableScanDesc,
+        tbmres: *mut TBMIterateResult,
+        slot: *mut TupleTableSlot,
+    ) -> bool;
+    #[link_name = "table_scan_sample_next_block__pgrx_cshim"]
+    pub fn table_scan_sample_next_block(
+        scan: TableScanDesc,
+        scanstate: *mut SampleScanState,
+    ) -> bool;
+    #[link_name = "table_scan_sample_next_tuple__pgrx_cshim"]
+    pub fn table_scan_sample_next_tuple(
+        scan: TableScanDesc,
+        scanstate: *mut SampleScanState,
+        slot: *mut TupleTableSlot,
+    ) -> bool;
     pub fn simple_table_tuple_insert(rel: Relation, slot: *mut TupleTableSlot);
     pub fn simple_table_tuple_delete(rel: Relation, tid: ItemPointer, snapshot: Snapshot);
     pub fn simple_table_tuple_update(
@@ -36599,6 +37284,16 @@ unsafe extern "C-unwind" {
     pub fn LWLockRelease(lock: *mut LWLock);
     pub fn LWLockReleaseClearVar(lock: *mut LWLock, valptr: *mut uint64, val: uint64);
     pub fn LWLockReleaseAll();
+    pub fn ForEachLWLockHeldByMe(
+        callback: ::core::option::Option<
+            unsafe extern "C-unwind" fn(
+                arg1: *mut LWLock,
+                arg2: LWLockMode::Type,
+                arg3: *mut ::core::ffi::c_void,
+            ),
+        >,
+        context: *mut ::core::ffi::c_void,
+    );
     pub fn LWLockHeldByMe(lock: *mut LWLock) -> bool;
     pub fn LWLockAnyHeldByMe(lock: *mut LWLock, nlocks: ::core::ffi::c_int, stride: usize) -> bool;
     pub fn LWLockHeldByMeInMode(lock: *mut LWLock, mode: LWLockMode::Type) -> bool;
@@ -37008,6 +37703,8 @@ unsafe extern "C-unwind" {
     pub static mut SnapshotSelfData: SnapshotData;
     pub static mut SnapshotAnyData: SnapshotData;
     pub static mut CatalogSnapshotData: SnapshotData;
+    #[link_name = "OldSnapshotThresholdActive__pgrx_cshim"]
+    pub fn OldSnapshotThresholdActive() -> bool;
     pub fn GetTransactionSnapshot() -> Snapshot;
     pub fn GetLatestSnapshot() -> Snapshot;
     pub fn SnapshotSetCommandId(curcid: CommandId);
@@ -37119,6 +37816,7 @@ unsafe extern "C-unwind" {
     pub fn InitBufferPoolAccess();
     pub fn InitBufferPoolBackend();
     pub fn AtEOXact_Buffers(isCommit: bool);
+    pub fn AssertBufferLocksPermitCatalogRead();
     pub fn PrintBufferLeakWarning(buffer: Buffer);
     pub fn CheckPointBuffers(flags: ::core::ffi::c_int);
     pub fn BufferGetBlockNumber(buffer: Buffer) -> BlockNumber;
@@ -37165,6 +37863,8 @@ unsafe extern "C-unwind" {
     pub fn TestForOldSnapshot_impl(snapshot: Snapshot, relation: Relation);
     pub fn GetAccessStrategy(btype: BufferAccessStrategyType::Type) -> BufferAccessStrategy;
     pub fn FreeAccessStrategy(strategy: BufferAccessStrategy);
+    #[link_name = "TestForOldSnapshot__pgrx_cshim"]
+    pub fn TestForOldSnapshot(snapshot: Snapshot, relation: Relation, page: Page);
     pub fn XLogHaveInvalidPages() -> bool;
     pub fn XLogCheckInvalidPages();
     pub fn XLogDropRelation(rnode: RelFileNode, forknum: ForkNumber::Type);
@@ -37404,6 +38104,7 @@ unsafe extern "C-unwind" {
     ) -> ::core::ffi::c_long;
     pub fn getExtensionOfObject(classId: Oid, objectId: Oid) -> Oid;
     pub fn getAutoExtensionsOfObject(classId: Oid, objectId: Oid) -> *mut List;
+    pub fn getExtensionType(extensionOid: Oid, typname: *const ::core::ffi::c_char) -> Oid;
     pub fn sequenceIsOwned(
         seqId: Oid,
         deptype: ::core::ffi::c_char,
@@ -37722,6 +38423,10 @@ unsafe extern "C-unwind" {
     pub fn SerializeReindexState(maxsize: Size, start_address: *mut ::core::ffi::c_char);
     pub fn RestoreReindexState(reindexstate: *mut ::core::ffi::c_void);
     pub fn IndexSetParentIndex(idx: Relation, parentOid: Oid);
+    #[link_name = "itemptr_encode__pgrx_cshim"]
+    pub fn itemptr_encode(itemptr: ItemPointer) -> int64;
+    #[link_name = "itemptr_decode__pgrx_cshim"]
+    pub fn itemptr_decode(itemptr: ItemPointer, encoded: int64);
     pub fn RangeVarGetRelidExtended(
         relation: *const RangeVar,
         lockmode: LOCKMODE,
@@ -38656,6 +39361,7 @@ unsafe extern "C-unwind" {
     pub fn get_extension_oid(extname: *const ::core::ffi::c_char, missing_ok: bool) -> Oid;
     pub fn get_extension_name(ext_oid: Oid) -> *mut ::core::ffi::c_char;
     pub fn extension_file_exists(extensionName: *const ::core::ffi::c_char) -> bool;
+    pub fn get_function_sibling_type(funcoid: Oid, typname: *const ::core::ffi::c_char) -> Oid;
     pub fn AlterExtensionNamespace(
         extensionName: *const ::core::ffi::c_char,
         newschema: *const ::core::ffi::c_char,
@@ -38754,10 +39460,14 @@ unsafe extern "C-unwind" {
     pub static mut debug_discard_caches: ::core::ffi::c_int;
     pub fn AcceptInvalidationMessages();
     pub fn AtEOXact_Inval(isCommit: bool);
+    pub fn PreInplace_Inval();
+    pub fn AtInplace_Inval();
+    pub fn ForgetInplace_Inval();
     pub fn AtEOSubXact_Inval(isCommit: bool);
     pub fn PostPrepare_Inval();
     pub fn CommandEndInvalidationMessages();
     pub fn CacheInvalidateHeapTuple(relation: Relation, tuple: HeapTuple, newtuple: HeapTuple);
+    pub fn CacheInvalidateHeapTupleInplace(relation: Relation, key_equivalent_tuple: HeapTuple);
     pub fn CacheInvalidateCatalog(catalogId: Oid);
     pub fn CacheInvalidateRelcache(relation: Relation);
     pub fn CacheInvalidateRelcacheAll();
@@ -39823,6 +40533,14 @@ unsafe extern "C-unwind" {
     pub static pg_enc2name_tbl: [pg_enc2name; 0usize];
     pub static pg_enc2gettext_tbl: [pg_enc2gettext; 0usize];
     pub static pg_wchar_table: [pg_wchar_tbl; 0usize];
+    #[link_name = "is_valid_unicode_codepoint__pgrx_cshim"]
+    pub fn is_valid_unicode_codepoint(c: pg_wchar) -> bool;
+    #[link_name = "is_utf16_surrogate_first__pgrx_cshim"]
+    pub fn is_utf16_surrogate_first(c: pg_wchar) -> bool;
+    #[link_name = "is_utf16_surrogate_second__pgrx_cshim"]
+    pub fn is_utf16_surrogate_second(c: pg_wchar) -> bool;
+    #[link_name = "surrogate_pair_to_codepoint__pgrx_cshim"]
+    pub fn surrogate_pair_to_codepoint(first: pg_wchar, second: pg_wchar) -> pg_wchar;
     pub fn pg_char_to_encoding(name: *const ::core::ffi::c_char) -> ::core::ffi::c_int;
     pub fn pg_encoding_to_char(encoding: ::core::ffi::c_int) -> *const ::core::ffi::c_char;
     pub fn pg_valid_server_encoding_id(encoding: ::core::ffi::c_int) -> ::core::ffi::c_int;
@@ -39907,6 +40625,16 @@ unsafe extern "C-unwind" {
         n: usize,
     ) -> ::core::ffi::c_int;
     pub fn pg_wchar_strlen(wstr: *const pg_wchar) -> usize;
+    pub fn pg_mblen_cstr(mbstr: *const ::core::ffi::c_char) -> ::core::ffi::c_int;
+    pub fn pg_mblen_range(
+        mbstr: *const ::core::ffi::c_char,
+        end: *const ::core::ffi::c_char,
+    ) -> ::core::ffi::c_int;
+    pub fn pg_mblen_with_len(
+        mbstr: *const ::core::ffi::c_char,
+        limit: ::core::ffi::c_int,
+    ) -> ::core::ffi::c_int;
+    pub fn pg_mblen_unbounded(mbstr: *const ::core::ffi::c_char) -> ::core::ffi::c_int;
     pub fn pg_mblen(mbstr: *const ::core::ffi::c_char) -> ::core::ffi::c_int;
     pub fn pg_dsplen(mbstr: *const ::core::ffi::c_char) -> ::core::ffi::c_int;
     pub fn pg_mbstrlen(mbstr: *const ::core::ffi::c_char) -> ::core::ffi::c_int;
@@ -40103,6 +40831,28 @@ unsafe extern "C-unwind" {
     pub fn pq_send_ascii_string(buf: StringInfo, str_: *const ::core::ffi::c_char);
     pub fn pq_sendfloat4(buf: StringInfo, f: float4);
     pub fn pq_sendfloat8(buf: StringInfo, f: float8);
+    #[link_name = "pq_writeint8__pgrx_cshim"]
+    pub fn pq_writeint8(buf: *mut StringInfoData, i: uint8);
+    #[link_name = "pq_writeint16__pgrx_cshim"]
+    pub fn pq_writeint16(buf: *mut StringInfoData, i: uint16);
+    #[link_name = "pq_writeint32__pgrx_cshim"]
+    pub fn pq_writeint32(buf: *mut StringInfoData, i: uint32);
+    #[link_name = "pq_writeint64__pgrx_cshim"]
+    pub fn pq_writeint64(buf: *mut StringInfoData, i: uint64);
+    #[link_name = "pq_writestring__pgrx_cshim"]
+    pub fn pq_writestring(buf: *mut StringInfoData, str_: *const ::core::ffi::c_char);
+    #[link_name = "pq_sendint8__pgrx_cshim"]
+    pub fn pq_sendint8(buf: StringInfo, i: uint8);
+    #[link_name = "pq_sendint16__pgrx_cshim"]
+    pub fn pq_sendint16(buf: StringInfo, i: uint16);
+    #[link_name = "pq_sendint32__pgrx_cshim"]
+    pub fn pq_sendint32(buf: StringInfo, i: uint32);
+    #[link_name = "pq_sendint64__pgrx_cshim"]
+    pub fn pq_sendint64(buf: StringInfo, i: uint64);
+    #[link_name = "pq_sendbyte__pgrx_cshim"]
+    pub fn pq_sendbyte(buf: StringInfo, byt: uint8);
+    #[link_name = "pq_sendint__pgrx_cshim"]
+    pub fn pq_sendint(buf: StringInfo, i: uint32, b: ::core::ffi::c_int);
     pub fn pq_begintypsend(buf: StringInfo);
     pub fn pq_endtypsend(buf: StringInfo) -> *mut bytea;
     pub fn pq_puttextmessage(msgtype: ::core::ffi::c_char, str_: *const ::core::ffi::c_char);
@@ -40298,6 +41048,22 @@ unsafe extern "C-unwind" {
     pub fn fix_opfuncids(node: *mut Node);
     pub fn set_opfuncid(opexpr: *mut OpExpr);
     pub fn set_sa_opfuncid(opexpr: *mut ScalarArrayOpExpr);
+    #[link_name = "is_funcclause__pgrx_cshim"]
+    pub fn is_funcclause(clause: *const ::core::ffi::c_void) -> bool;
+    #[link_name = "is_opclause__pgrx_cshim"]
+    pub fn is_opclause(clause: *const ::core::ffi::c_void) -> bool;
+    #[link_name = "get_leftop__pgrx_cshim"]
+    pub fn get_leftop(clause: *const ::core::ffi::c_void) -> *mut Node;
+    #[link_name = "get_rightop__pgrx_cshim"]
+    pub fn get_rightop(clause: *const ::core::ffi::c_void) -> *mut Node;
+    #[link_name = "is_andclause__pgrx_cshim"]
+    pub fn is_andclause(clause: *const ::core::ffi::c_void) -> bool;
+    #[link_name = "is_orclause__pgrx_cshim"]
+    pub fn is_orclause(clause: *const ::core::ffi::c_void) -> bool;
+    #[link_name = "is_notclause__pgrx_cshim"]
+    pub fn is_notclause(clause: *const ::core::ffi::c_void) -> bool;
+    #[link_name = "get_notclausearg__pgrx_cshim"]
+    pub fn get_notclausearg(notclause: *const ::core::ffi::c_void) -> *mut Expr;
     pub fn check_functions_in_node(
         node: *mut Node,
         checker: check_function_callback,
@@ -42425,6 +43191,11 @@ unsafe extern "C-unwind" {
         text: *const ::core::ffi::c_char,
         keywords: *const ScanKeywordList,
     ) -> ::core::ffi::c_int;
+    #[link_name = "GetScanKeyword__pgrx_cshim"]
+    pub fn GetScanKeyword(
+        n: ::core::ffi::c_int,
+        keywords: *const ScanKeywordList,
+    ) -> *const ::core::ffi::c_char;
     pub static ScanKeywords: ScanKeywordList;
     pub static ScanKeywordCategories: [uint8; 0usize];
     pub static ScanKeywordBareLabel: [bool; 0usize];
@@ -42617,6 +43388,14 @@ unsafe extern "C-unwind" {
         isnulls: *const bool,
         expand_external: bool,
     );
+    #[link_name = "expanded_record_get_tupdesc__pgrx_cshim"]
+    pub fn expanded_record_get_tupdesc(erh: *mut ExpandedRecordHeader) -> TupleDesc;
+    #[link_name = "expanded_record_get_field__pgrx_cshim"]
+    pub fn expanded_record_get_field(
+        erh: *mut ExpandedRecordHeader,
+        fnumber: ::core::ffi::c_int,
+        isnull: *mut bool,
+    ) -> Datum;
     pub fn lookup_type_cache(type_id: Oid, flags: ::core::ffi::c_int) -> *mut TypeCacheEntry;
     pub fn InitDomainConstraintRef(
         type_id: Oid,
@@ -43130,6 +43909,8 @@ unsafe extern "C-unwind" {
     pub static mut hot_standby_feedback: bool;
     pub static mut WalRcv: *mut WalRcvData;
     pub static mut WalReceiverFunctions: *mut WalReceiverFunctionsType;
+    #[link_name = "walrcv_clear_result__pgrx_cshim"]
+    pub fn walrcv_clear_result(walres: *mut WalRcvExecResult);
     pub fn WalReceiverMain() -> !;
     pub fn ProcessWalRcvInterrupts();
     pub fn WalRcvShmemSize() -> Size;
@@ -43844,6 +44625,8 @@ unsafe extern "C-unwind" {
     pub fn UtilityTupleDescriptor(parsetree: *mut Node) -> TupleDesc;
     pub fn UtilityContainsQuery(parsetree: *mut Node) -> *mut Query;
     pub fn CreateCommandTag(parsetree: *mut Node) -> CommandTag::Type;
+    #[link_name = "CreateCommandName__pgrx_cshim"]
+    pub fn CreateCommandName(parsetree: *mut Node) -> *const ::core::ffi::c_char;
     pub fn GetCommandLogLevel(parsetree: *mut Node) -> LogStmtLevel::Type;
     pub fn CommandIsReadOnly(pstmt: *mut PlannedStmt) -> bool;
     pub static mut TSCurrentConfig: *mut ::core::ffi::c_char;
@@ -46782,6 +47565,7 @@ unsafe extern "C-unwind" {
         base: ::core::ffi::c_int,
     ) -> uint64;
     pub fn buildoidvector(oids: *const Oid, n: ::core::ffi::c_int) -> *mut oidvector;
+    pub fn check_valid_oidvector(oidArray: *const oidvector);
     pub fn oidparse(node: *mut Node) -> Oid;
     pub fn oid_cmp(
         p1: *const ::core::ffi::c_void,
@@ -47062,6 +47846,74 @@ unsafe extern "C-unwind" {
     pub fn float8out_internal(num: float8) -> *mut ::core::ffi::c_char;
     pub fn float4_cmp_internal(a: float4, b: float4) -> ::core::ffi::c_int;
     pub fn float8_cmp_internal(a: float8, b: float8) -> ::core::ffi::c_int;
+    #[link_name = "get_float4_infinity__pgrx_cshim"]
+    pub fn get_float4_infinity() -> float4;
+    #[link_name = "get_float8_infinity__pgrx_cshim"]
+    pub fn get_float8_infinity() -> float8;
+    #[link_name = "get_float4_nan__pgrx_cshim"]
+    pub fn get_float4_nan() -> float4;
+    #[link_name = "get_float8_nan__pgrx_cshim"]
+    pub fn get_float8_nan() -> float8;
+    #[link_name = "float4_pl__pgrx_cshim"]
+    pub fn float4_pl(val1: float4, val2: float4) -> float4;
+    #[link_name = "float8_pl__pgrx_cshim"]
+    pub fn float8_pl(val1: float8, val2: float8) -> float8;
+    #[link_name = "float4_mi__pgrx_cshim"]
+    pub fn float4_mi(val1: float4, val2: float4) -> float4;
+    #[link_name = "float8_mi__pgrx_cshim"]
+    pub fn float8_mi(val1: float8, val2: float8) -> float8;
+    #[link_name = "float4_mul__pgrx_cshim"]
+    pub fn float4_mul(val1: float4, val2: float4) -> float4;
+    #[link_name = "float8_mul__pgrx_cshim"]
+    pub fn float8_mul(val1: float8, val2: float8) -> float8;
+    #[link_name = "float4_div__pgrx_cshim"]
+    pub fn float4_div(val1: float4, val2: float4) -> float4;
+    #[link_name = "float8_div__pgrx_cshim"]
+    pub fn float8_div(val1: float8, val2: float8) -> float8;
+    #[link_name = "float4_eq__pgrx_cshim"]
+    pub fn float4_eq(val1: float4, val2: float4) -> bool;
+    #[link_name = "float8_eq__pgrx_cshim"]
+    pub fn float8_eq(val1: float8, val2: float8) -> bool;
+    #[link_name = "float4_ne__pgrx_cshim"]
+    pub fn float4_ne(val1: float4, val2: float4) -> bool;
+    #[link_name = "float8_ne__pgrx_cshim"]
+    pub fn float8_ne(val1: float8, val2: float8) -> bool;
+    #[link_name = "float4_lt__pgrx_cshim"]
+    pub fn float4_lt(val1: float4, val2: float4) -> bool;
+    #[link_name = "float8_lt__pgrx_cshim"]
+    pub fn float8_lt(val1: float8, val2: float8) -> bool;
+    #[link_name = "float4_le__pgrx_cshim"]
+    pub fn float4_le(val1: float4, val2: float4) -> bool;
+    #[link_name = "float8_le__pgrx_cshim"]
+    pub fn float8_le(val1: float8, val2: float8) -> bool;
+    #[link_name = "float4_gt__pgrx_cshim"]
+    pub fn float4_gt(val1: float4, val2: float4) -> bool;
+    #[link_name = "float8_gt__pgrx_cshim"]
+    pub fn float8_gt(val1: float8, val2: float8) -> bool;
+    #[link_name = "float4_ge__pgrx_cshim"]
+    pub fn float4_ge(val1: float4, val2: float4) -> bool;
+    #[link_name = "float8_ge__pgrx_cshim"]
+    pub fn float8_ge(val1: float8, val2: float8) -> bool;
+    #[link_name = "float4_min__pgrx_cshim"]
+    pub fn float4_min(val1: float4, val2: float4) -> float4;
+    #[link_name = "float8_min__pgrx_cshim"]
+    pub fn float8_min(val1: float8, val2: float8) -> float8;
+    #[link_name = "float4_max__pgrx_cshim"]
+    pub fn float4_max(val1: float4, val2: float4) -> float4;
+    #[link_name = "float8_max__pgrx_cshim"]
+    pub fn float8_max(val1: float8, val2: float8) -> float8;
+    #[link_name = "FPeq__pgrx_cshim"]
+    pub fn FPeq(A: f64, B: f64) -> bool;
+    #[link_name = "FPne__pgrx_cshim"]
+    pub fn FPne(A: f64, B: f64) -> bool;
+    #[link_name = "FPlt__pgrx_cshim"]
+    pub fn FPlt(A: f64, B: f64) -> bool;
+    #[link_name = "FPle__pgrx_cshim"]
+    pub fn FPle(A: f64, B: f64) -> bool;
+    #[link_name = "FPgt__pgrx_cshim"]
+    pub fn FPgt(A: f64, B: f64) -> bool;
+    #[link_name = "FPge__pgrx_cshim"]
+    pub fn FPge(A: f64, B: f64) -> bool;
     pub fn pg_hypot(x: float8, y: float8) -> float8;
     pub static config_group_names: [*const ::core::ffi::c_char; 0usize];
     pub static config_type_names: [*const ::core::ffi::c_char; 0usize];
@@ -47424,8 +48276,14 @@ unsafe extern "C-unwind" {
         tuple: HeapTuple,
         newtuple: HeapTuple,
         function: ::core::option::Option<
-            unsafe extern "C-unwind" fn(arg1: ::core::ffi::c_int, arg2: uint32, arg3: Oid),
+            unsafe extern "C-unwind" fn(
+                arg1: ::core::ffi::c_int,
+                arg2: uint32,
+                arg3: Oid,
+                arg4: *mut ::core::ffi::c_void,
+            ),
         >,
+        context: *mut ::core::ffi::c_void,
     );
     pub fn PrintCatCacheLeakWarning(tuple: HeapTuple);
     pub fn PrintCatCacheListLeakWarning(list: *mut CatCList);
