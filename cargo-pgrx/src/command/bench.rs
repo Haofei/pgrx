@@ -261,10 +261,8 @@ impl CommandExecute for Bench {
                 baseline.as_ref(),
                 compare_group.as_ref().map(|group| group.group_name.as_str()),
             ));
-            if show_human_output {
-                if let Some(completed_benchmark) = summary_benchmarks.last() {
-                    print_completed_benchmark(completed_benchmark);
-                }
+            if show_human_output && let Some(completed_benchmark) = summary_benchmarks.last() {
+                print_completed_benchmark(completed_benchmark);
             }
         }
 

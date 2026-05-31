@@ -440,8 +440,7 @@ impl CommandExecute for Regress {
 
                 // When the user explicitly filters, error if any matched test
                 // has no expected output (they should use --add first)
-                let output_names =
-                    output_files.iter().map(|e| make_test_name(e)).collect::<HashSet<_>>();
+                let output_names = output_files.iter().map(make_test_name).collect::<HashSet<_>>();
                 for entry in &test_files {
                     let name = make_test_name(entry);
                     if !output_names.contains(&name) {
@@ -581,7 +580,7 @@ impl Regress {
             } else {
                 // Run setup.sql normally to establish schema/data
                 let verbosity = &self.psql_verbosity.clone().unwrap_or("terse".into());
-                run_tests(pg_config, pgregress_path, dbname, &[&setup_entry], verbosity, 0)?;
+                run_tests(pg_config, pgregress_path, dbname, &[setup_entry], verbosity, 0)?;
             }
         }
 
@@ -637,16 +636,16 @@ impl Regress {
         // List test files (without setup, then report)
         let test_files = self.list_sql_tests(manifest_path, false)?;
         let output_files = self.list_expected_outputs(manifest_path, false)?;
-        let output_names = output_files.iter().map(|e| make_test_name(e)).collect::<HashSet<_>>();
+        let output_names = output_files.iter().map(make_test_name).collect::<HashSet<_>>();
 
         let mut ready = Vec::new();
         let mut skipped = Vec::new();
         for entry in &test_files {
             let name = make_test_name(entry);
-            if let Some(ref filter) = self.test_filter {
-                if !name.contains(filter) {
-                    continue;
-                }
+            if let Some(ref filter) = self.test_filter
+                && !name.contains(filter)
+            {
+                continue;
             }
             if output_names.contains(&name) {
                 ready.push(name);
@@ -771,7 +770,7 @@ fn pg_regress(
             use std::os::unix::fs::PermissionsExt;
 
             let launcher_script =
-                format!("#! /bin/bash\n$* -v VERBOSITY={}", verbosity.to_string(),).into_bytes();
+                format!("#! /bin/bash\n$* -v VERBOSITY={}", verbosity,).into_bytes();
 
             let path = temp_dir().join(format!("pgrx-pg_regress-runner-{}.sh", std::process::id()));
             let mut tmpfile = File::create(&path)?;
@@ -841,11 +840,11 @@ fn print_regression_diffs(manifest_path: &Path, verbose: u8, run: u32, repeat: u
         return;
     }
 
-    if verbose >= 1 {
-        if let Ok(content) = std::fs::read_to_string(&diffs_path) {
-            eprintln!();
-            eprintln!("{content}");
-        }
+    if verbose >= 1
+        && let Ok(content) = std::fs::read_to_string(&diffs_path)
+    {
+        eprintln!();
+        eprintln!("{content}");
     }
 
     // When repeating, rename to regression.<run>.diffs so each run's output is preserved
