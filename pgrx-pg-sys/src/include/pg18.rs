@@ -164,17 +164,17 @@ pub const MAXIMUM_ALIGNOF: u32 = 8;
 pub const MEMSET_LOOP_LIMIT: u32 = 1024;
 pub const PACKAGE_BUGREPORT: &::core::ffi::CStr = c"pgsql-bugs@lists.postgresql.org";
 pub const PACKAGE_NAME: &::core::ffi::CStr = c"PostgreSQL";
-pub const PACKAGE_STRING: &::core::ffi::CStr = c"PostgreSQL 18.3";
+pub const PACKAGE_STRING: &::core::ffi::CStr = c"PostgreSQL 18.4";
 pub const PACKAGE_TARNAME: &::core::ffi::CStr = c"postgresql";
 pub const PACKAGE_URL: &::core::ffi::CStr = c"https://www.postgresql.org/";
-pub const PACKAGE_VERSION: &::core::ffi::CStr = c"18.3";
+pub const PACKAGE_VERSION: &::core::ffi::CStr = c"18.4";
 pub const PG_KRB_SRVNAM: &::core::ffi::CStr = c"postgres";
 pub const PG_MAJORVERSION: &::core::ffi::CStr = c"18";
 pub const PG_MAJORVERSION_NUM: u32 = 18;
-pub const PG_MINORVERSION_NUM: u32 = 3;
-pub const PG_VERSION: &::core::ffi::CStr = c"18.3";
-pub const PG_VERSION_NUM: u32 = 180003;
-pub const PG_VERSION_STR : & :: core :: ffi :: CStr = c"PostgreSQL 18.3 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0, 64-bit" ;
+pub const PG_MINORVERSION_NUM: u32 = 4;
+pub const PG_VERSION: &::core::ffi::CStr = c"18.4";
+pub const PG_VERSION_NUM: u32 = 180004;
+pub const PG_VERSION_STR : & :: core :: ffi :: CStr = c"PostgreSQL 18.4 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0, 64-bit" ;
 pub const RELSEG_SIZE: u32 = 131072;
 pub const SIZEOF_LONG: u32 = 8;
 pub const SIZEOF_LONG_LONG: u32 = 8;
@@ -251,7 +251,7 @@ pub const PG_BINARY_A: &::core::ffi::CStr = c"a";
 pub const PG_BINARY_R: &::core::ffi::CStr = c"r";
 pub const PG_BINARY_W: &::core::ffi::CStr = c"w";
 pub const PGINVALID_SOCKET: i32 = -1;
-pub const PG_BACKEND_VERSIONSTR: &::core::ffi::CStr = c"postgres (PostgreSQL) 18.3\n";
+pub const PG_BACKEND_VERSIONSTR: &::core::ffi::CStr = c"postgres (PostgreSQL) 18.4\n";
 pub const EXE: &::core::ffi::CStr = c"";
 pub const DEVNULL: &::core::ffi::CStr = c"/dev/null";
 pub const USE_REPL_SNPRINTF: u32 = 1;
@@ -6224,6 +6224,7 @@ pub const RANGESTRAT_CONTAINS: u32 = 7;
 pub const RANGESTRAT_CONTAINED_BY: u32 = 8;
 pub const RANGESTRAT_CONTAINS_ELEM: u32 = 16;
 pub const RANGESTRAT_EQ: u32 = 18;
+pub type __uint64_t = ::core::ffi::c_ulong;
 pub type __uid_t = ::core::ffi::c_uint;
 pub type __gid_t = ::core::ffi::c_uint;
 pub type __ino_t = ::core::ffi::c_ulong;
@@ -6233,7 +6234,7 @@ pub type __off64_t = ::core::ffi::c_long;
 pub type __pid_t = ::core::ffi::c_int;
 pub type __socklen_t = ::core::ffi::c_uint;
 pub type __sig_atomic_t = ::core::ffi::c_int;
-pub type va_list = __builtin_va_list;
+pub type __gnuc_va_list = __builtin_va_list;
 pub type FILE = _IO_FILE;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -6269,7 +6270,9 @@ pub struct _IO_FILE {
     pub _markers: *mut _IO_marker,
     pub _chain: *mut _IO_FILE,
     pub _fileno: ::core::ffi::c_int,
-    pub _flags2: ::core::ffi::c_int,
+    pub _bitfield_align_1: [u32; 0],
+    pub _bitfield_1: __BindgenBitfieldUnit<[u8; 3usize]>,
+    pub _short_backupbuf: [::core::ffi::c_char; 1usize],
     pub _old_offset: __off_t,
     pub _cur_column: ::core::ffi::c_ushort,
     pub _vtable_offset: ::core::ffi::c_schar,
@@ -6280,9 +6283,11 @@ pub struct _IO_FILE {
     pub _wide_data: *mut _IO_wide_data,
     pub _freeres_list: *mut _IO_FILE,
     pub _freeres_buf: *mut ::core::ffi::c_void,
-    pub __pad5: usize,
+    pub _prevchain: *mut *mut _IO_FILE,
     pub _mode: ::core::ffi::c_int,
-    pub _unused2: [::core::ffi::c_char; 20usize],
+    pub _unused3: ::core::ffi::c_int,
+    pub _total_written: __uint64_t,
+    pub _unused2: [::core::ffi::c_char; 8usize],
 }
 impl Default for _IO_FILE {
     fn default() -> Self {
@@ -6293,6 +6298,51 @@ impl Default for _IO_FILE {
         }
     }
 }
+impl _IO_FILE {
+    #[inline]
+    pub fn _flags2(&self) -> ::core::ffi::c_int {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(0usize, 24u8) as u32) }
+    }
+    #[inline]
+    pub fn set__flags2(&mut self, val: ::core::ffi::c_int) {
+        unsafe {
+            let val: u32 = ::core::mem::transmute(val);
+            self._bitfield_1.set(0usize, 24u8, val as u64)
+        }
+    }
+    #[inline]
+    pub unsafe fn _flags2_raw(this: *const Self) -> ::core::ffi::c_int {
+        unsafe {
+            ::core::mem::transmute(<__BindgenBitfieldUnit<[u8; 3usize]>>::raw_get(
+                ::core::ptr::addr_of!((*this)._bitfield_1),
+                0usize,
+                24u8,
+            ) as u32)
+        }
+    }
+    #[inline]
+    pub unsafe fn set__flags2_raw(this: *mut Self, val: ::core::ffi::c_int) {
+        unsafe {
+            let val: u32 = ::core::mem::transmute(val);
+            <__BindgenBitfieldUnit<[u8; 3usize]>>::raw_set(
+                ::core::ptr::addr_of_mut!((*this)._bitfield_1),
+                0usize,
+                24u8,
+                val as u64,
+            )
+        }
+    }
+    #[inline]
+    pub fn new_bitfield_1(_flags2: ::core::ffi::c_int) -> __BindgenBitfieldUnit<[u8; 3usize]> {
+        let mut __bindgen_bitfield_unit: __BindgenBitfieldUnit<[u8; 3usize]> = Default::default();
+        __bindgen_bitfield_unit.set(0usize, 24u8, {
+            let _flags2: u32 = unsafe { ::core::mem::transmute(_flags2) };
+            _flags2 as u64
+        });
+        __bindgen_bitfield_unit
+    }
+}
+pub type va_list = __gnuc_va_list;
 pub type off_t = __off_t;
 pub type gid_t = __gid_t;
 pub type mode_t = __mode_t;
@@ -19200,7 +19250,7 @@ pub mod TypeFuncClass {
     pub const TYPEFUNC_OTHER: Type = 4;
 }
 pub type sig_atomic_t = __sig_atomic_t;
-pub mod _bindgen_ty_16 {
+pub mod _bindgen_ty_17 {
     pub type Type = ::core::ffi::c_uint;
     pub const SIGEV_SIGNAL: Type = 0;
     pub const SIGEV_NONE: Type = 1;
@@ -28651,6 +28701,8 @@ impl Default for ExprEvalStep__bindgen_ty_1__bindgen_ty_34 {
 pub struct ExprEvalStep__bindgen_ty_1__bindgen_ty_35 {
     pub has_nulls: bool,
     pub inclause: bool,
+    pub null_lhs_result: bool,
+    pub null_lhs_isnull: bool,
     pub elements_tab: *mut ScalarArrayOpExprHashTable,
     pub finfo: *mut FmgrInfo,
     pub fcinfo_data: FunctionCallInfo,
@@ -30665,7 +30717,7 @@ pub mod PLpgSQL_stmt_type {
     pub const PLPGSQL_STMT_COMMIT: Type = 25;
     pub const PLPGSQL_STMT_ROLLBACK: Type = 26;
 }
-pub mod _bindgen_ty_25 {
+pub mod _bindgen_ty_26 {
     pub type Type = ::core::ffi::c_uint;
     pub const PLPGSQL_RC_OK: Type = 0;
     pub const PLPGSQL_RC_EXIT: Type = 1;
@@ -33091,6 +33143,47 @@ impl Default for WalSndCtlData {
         }
     }
 }
+pub type replace_rte_variables_callback = ::core::option::Option<
+    unsafe extern "C-unwind" fn(
+        var: *mut Var,
+        context: *mut replace_rte_variables_context,
+    ) -> *mut Node,
+>;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct replace_rte_variables_context {
+    pub callback: replace_rte_variables_callback,
+    pub callback_arg: *mut ::core::ffi::c_void,
+    pub target_varno: ::core::ffi::c_int,
+    pub sublevels_up: ::core::ffi::c_int,
+    pub inserted_sublink: bool,
+}
+impl Default for replace_rte_variables_context {
+    fn default() -> Self {
+        let mut s = ::core::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::core::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+pub mod ReplaceVarsNoMatchOption {
+    pub type Type = ::core::ffi::c_uint;
+    pub const REPLACEVARS_REPORT_ERROR: Type = 0;
+    pub const REPLACEVARS_CHANGE_VARNO: Type = 1;
+    pub const REPLACEVARS_SUBSTITUTE_NULL: Type = 2;
+}
+pub type ChangeVarNodes_callback = ::core::option::Option<
+    unsafe extern "C-unwind" fn(node: *mut Node, arg: *mut ChangeVarNodes_context) -> bool,
+>;
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone)]
+pub struct ChangeVarNodes_context {
+    pub rt_index: ::core::ffi::c_int,
+    pub new_index: ::core::ffi::c_int,
+    pub sublevels_up: ::core::ffi::c_int,
+    pub callback: ChangeVarNodes_callback,
+}
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct RowSecurityPolicy {
@@ -33269,6 +33362,7 @@ pub mod ProcSignalReason {
     pub const PROCSIG_RECOVERY_CONFLICT_BUFFERPIN: Type = 12;
     pub const PROCSIG_RECOVERY_CONFLICT_STARTUP_DEADLOCK: Type = 13;
     pub const PROCSIG_RECOVERY_CONFLICT_LAST: Type = 13;
+    pub const PROCSIG_SLOTSYNC_MESSAGE: Type = 14;
 }
 pub mod ProcSignalBarrierType {
     pub type Type = ::core::ffi::c_uint;
@@ -35381,6 +35475,7 @@ unsafe extern "C-unwind" {
     pub fn cleanup_path(path: *mut ::core::ffi::c_char);
     pub fn path_contains_parent_reference(path: *const ::core::ffi::c_char) -> bool;
     pub fn path_is_relative_and_below_cwd(path: *const ::core::ffi::c_char) -> bool;
+    pub fn path_is_safe_for_extraction(path: *const ::core::ffi::c_char) -> bool;
     pub fn path_is_prefix_of_path(
         path1: *const ::core::ffi::c_char,
         path2: *const ::core::ffi::c_char,
@@ -35522,16 +35617,6 @@ unsafe extern "C-unwind" {
         uid: *mut uid_t,
         gid: *mut gid_t,
     ) -> ::core::ffi::c_int;
-    pub fn strlcat(
-        dst: *mut ::core::ffi::c_char,
-        src: *const ::core::ffi::c_char,
-        siz: usize,
-    ) -> usize;
-    pub fn strlcpy(
-        dst: *mut ::core::ffi::c_char,
-        src: *const ::core::ffi::c_char,
-        siz: usize,
-    ) -> usize;
     pub fn timingsafe_bcmp(
         b1: *const ::core::ffi::c_void,
         b2: *const ::core::ffi::c_void,
@@ -35785,6 +35870,26 @@ unsafe extern "C-unwind" {
         size: Size,
     ) -> *mut ::core::ffi::c_void;
     pub fn pfree(pointer: *mut ::core::ffi::c_void);
+    pub fn add_size(s1: Size, s2: Size) -> Size;
+    pub fn mul_size(s1: Size, s2: Size) -> Size;
+    pub fn palloc_mul(s1: Size, s2: Size) -> *mut ::core::ffi::c_void;
+    pub fn palloc0_mul(s1: Size, s2: Size) -> *mut ::core::ffi::c_void;
+    pub fn palloc_mul_extended(
+        s1: Size,
+        s2: Size,
+        flags: ::core::ffi::c_int,
+    ) -> *mut ::core::ffi::c_void;
+    pub fn repalloc_mul(
+        p: *mut ::core::ffi::c_void,
+        s1: Size,
+        s2: Size,
+    ) -> *mut ::core::ffi::c_void;
+    pub fn repalloc_mul_extended(
+        p: *mut ::core::ffi::c_void,
+        s1: Size,
+        s2: Size,
+        flags: ::core::ffi::c_int,
+    ) -> *mut ::core::ffi::c_void;
     pub fn MemoryContextAllocHuge(context: MemoryContext, size: Size) -> *mut ::core::ffi::c_void;
     pub fn repalloc_huge(pointer: *mut ::core::ffi::c_void, size: Size)
     -> *mut ::core::ffi::c_void;
@@ -40010,6 +40115,7 @@ unsafe extern "C-unwind" {
     pub fn GetRecoveryState() -> RecoveryState::Type;
     pub fn XLogInsertAllowed() -> bool;
     pub fn GetXLogInsertRecPtr() -> XLogRecPtr;
+    pub fn GetXLogInsertEndRecPtr() -> XLogRecPtr;
     pub fn GetXLogWriteRecPtr() -> XLogRecPtr;
     pub fn GetSystemIdentifier() -> uint64;
     pub fn GetMockAuthenticationNonce() -> *mut ::core::ffi::c_char;
@@ -40490,8 +40596,6 @@ unsafe extern "C-unwind" {
         size: Size,
         foundPtr: *mut bool,
     ) -> *mut ::core::ffi::c_void;
-    pub fn add_size(s1: Size, s2: Size) -> Size;
-    pub fn mul_size(s1: Size, s2: Size) -> Size;
     pub fn pg_get_shmem_pagesize() -> Size;
     pub fn RequestAddinShmemSpace(size: Size);
     pub fn shm_toc_create(
@@ -42031,6 +42135,7 @@ unsafe extern "C-unwind" {
         all_frozen: *mut BlockNumber,
     );
     pub fn visibilitymap_prepare_truncate(rel: Relation, nheapblocks: BlockNumber) -> BlockNumber;
+    pub fn visibilitymap_truncation_length(nheapblocks: BlockNumber) -> BlockNumber;
     #[link_name = "XLogFileName__pgrx_cshim"]
     pub fn XLogFileName(
         fname: *mut ::core::ffi::c_char,
@@ -49648,6 +49753,115 @@ unsafe extern "C-unwind" {
         rt_index: ::core::ffi::c_int,
     ) -> *mut Node;
     pub fn build_generation_expression(rel: Relation, attrno: ::core::ffi::c_int) -> *mut Node;
+    pub fn adjust_relid_set(
+        relids: Relids,
+        oldrelid: ::core::ffi::c_int,
+        newrelid: ::core::ffi::c_int,
+    ) -> Relids;
+    pub fn CombineRangeTables(
+        dst_rtable: *mut *mut List,
+        dst_perminfos: *mut *mut List,
+        src_rtable: *mut List,
+        src_perminfos: *mut List,
+    );
+    pub fn OffsetVarNodes(
+        node: *mut Node,
+        offset: ::core::ffi::c_int,
+        sublevels_up: ::core::ffi::c_int,
+    );
+    pub fn ChangeVarNodes(
+        node: *mut Node,
+        rt_index: ::core::ffi::c_int,
+        new_index: ::core::ffi::c_int,
+        sublevels_up: ::core::ffi::c_int,
+    );
+    pub fn ChangeVarNodesExtended(
+        node: *mut Node,
+        rt_index: ::core::ffi::c_int,
+        new_index: ::core::ffi::c_int,
+        sublevels_up: ::core::ffi::c_int,
+        callback: ChangeVarNodes_callback,
+    );
+    pub fn ChangeVarNodesWalkExpression(
+        node: *mut Node,
+        context: *mut ChangeVarNodes_context,
+    ) -> bool;
+    pub fn IncrementVarSublevelsUp(
+        node: *mut Node,
+        delta_sublevels_up: ::core::ffi::c_int,
+        min_sublevels_up: ::core::ffi::c_int,
+    );
+    pub fn IncrementVarSublevelsUp_rtable(
+        rtable: *mut List,
+        delta_sublevels_up: ::core::ffi::c_int,
+        min_sublevels_up: ::core::ffi::c_int,
+    );
+    pub fn rangeTableEntry_used(
+        node: *mut Node,
+        rt_index: ::core::ffi::c_int,
+        sublevels_up: ::core::ffi::c_int,
+    ) -> bool;
+    pub fn getInsertSelectQuery(
+        parsetree: *mut Query,
+        subquery_ptr: *mut *mut *mut Query,
+    ) -> *mut Query;
+    pub fn AddQual(parsetree: *mut Query, qual: *mut Node);
+    pub fn AddInvertedQual(parsetree: *mut Query, qual: *mut Node);
+    pub fn contain_aggs_of_level(node: *mut Node, levelsup: ::core::ffi::c_int) -> bool;
+    pub fn locate_agg_of_level(node: *mut Node, levelsup: ::core::ffi::c_int)
+    -> ::core::ffi::c_int;
+    pub fn contain_windowfuncs(node: *mut Node) -> bool;
+    pub fn locate_windowfunc(node: *mut Node) -> ::core::ffi::c_int;
+    pub fn checkExprHasSubLink(node: *mut Node) -> bool;
+    pub fn add_nulling_relids(
+        node: *mut Node,
+        target_relids: *const Bitmapset,
+        added_relids: *const Bitmapset,
+    ) -> *mut Node;
+    pub fn remove_nulling_relids(
+        node: *mut Node,
+        removable_relids: *const Bitmapset,
+        except_relids: *const Bitmapset,
+    ) -> *mut Node;
+    pub fn replace_rte_variables(
+        node: *mut Node,
+        target_varno: ::core::ffi::c_int,
+        sublevels_up: ::core::ffi::c_int,
+        callback: replace_rte_variables_callback,
+        callback_arg: *mut ::core::ffi::c_void,
+        outer_hasSubLinks: *mut bool,
+    ) -> *mut Node;
+    pub fn replace_rte_variables_mutator(
+        node: *mut Node,
+        context: *mut replace_rte_variables_context,
+    ) -> *mut Node;
+    pub fn map_variable_attnos(
+        node: *mut Node,
+        target_varno: ::core::ffi::c_int,
+        sublevels_up: ::core::ffi::c_int,
+        attno_map: *const AttrMap,
+        to_rowtype: Oid,
+        found_whole_row: *mut bool,
+    ) -> *mut Node;
+    pub fn ReplaceVarFromTargetList(
+        var: *mut Var,
+        target_rte: *mut RangeTblEntry,
+        targetlist: *mut List,
+        result_relation: ::core::ffi::c_int,
+        nomatch_option: ReplaceVarsNoMatchOption::Type,
+        nomatch_varno: ::core::ffi::c_int,
+    ) -> *mut Node;
+    pub fn ReplaceVarsFromTargetList(
+        node: *mut Node,
+        target_varno: ::core::ffi::c_int,
+        sublevels_up: ::core::ffi::c_int,
+        target_rte: *mut RangeTblEntry,
+        targetlist: *mut List,
+        result_relation: ::core::ffi::c_int,
+        nomatch_option: ReplaceVarsNoMatchOption::Type,
+        nomatch_varno: ::core::ffi::c_int,
+        outer_hasSubLinks: *mut bool,
+    ) -> *mut Node;
     pub static mut row_security_policy_hook_permissive: row_security_policy_hook_type;
     pub static mut row_security_policy_hook_restrictive: row_security_policy_hook_type;
     pub fn get_row_security_policies(
@@ -54111,6 +54325,7 @@ unsafe extern "C-unwind" {
     pub fn get_op_index_interpretation(opno: Oid) -> *mut List;
     pub fn equality_ops_are_compatible(opno1: Oid, opno2: Oid) -> bool;
     pub fn comparison_ops_are_compatible(opno1: Oid, opno2: Oid) -> bool;
+    pub fn collations_agree_on_equality(coll1: Oid, coll2: Oid) -> bool;
     pub fn get_opfamily_proc(opfamily: Oid, lefttype: Oid, righttype: Oid, procnum: int16) -> Oid;
     pub fn get_attname(
         relid: Oid,
