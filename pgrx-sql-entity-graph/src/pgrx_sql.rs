@@ -22,6 +22,7 @@ use petgraph::dot::Dot;
 use petgraph::graph::NodeIndex;
 use petgraph::stable_graph::StableGraph;
 use petgraph::visit::EdgeRef;
+use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::fmt::Debug;
 use std::path::Path;
@@ -82,6 +83,7 @@ pub struct PgrxSql<'a> {
     pub triggers: HashMap<PgTriggerEntity<'a>, NodeIndex>,
     pub extension_name: String,
     pub versioned_so: bool,
+    pub qualify_default_schema: bool,
 }
 
 impl<'a> PgrxSql<'a> {
@@ -253,6 +255,7 @@ impl<'a> PgrxSql<'a> {
             graph_finalize: finalize,
             extension_name,
             versioned_so,
+            qualify_default_schema: false,
         };
         Ok(this)
     }
@@ -406,7 +409,16 @@ impl<'a> PgrxSql<'a> {
     }
 
     pub fn schema_prefix_for(&self, target: &NodeIndex) -> String {
-        self.schema_alias_of(target).map(|v| (v + ".").to_string()).unwrap_or_default()
+        self.schema_alias_of(target)
+            .or_else(|| {
+                if matches!(&self.graph[*target], SqlGraphEntity::BuiltinType(_)) {
+                    None
+                } else {
+                    self.qualify_default_schema.then(|| self.control.schema.clone()).flatten()
+                }
+            })
+            .map(|v| (v + ".").to_string())
+            .unwrap_or_default()
     }
 
     pub fn find_type_dependency(
@@ -425,8 +437,9 @@ impl<'a> PgrxSql<'a> {
         slot: &str,
         used_ty: &UsedTypeEntity<'_>,
     ) -> eyre::Result<String> {
-        if !used_ty.needs_type_resolution() {
-            return Ok(String::new());
+        match used_ty.resolution() {
+            None | Some((_, TypeOrigin::External)) => return Ok(String::new()),
+            Some((_, TypeOrigin::ThisExtension)) => (),
         }
 
         let graph_index = self
@@ -725,6 +738,27 @@ impl<'a> PgrxSql<'a> {
         extension_name: Option<&str>,
         mut warn: W,
     ) -> eyre::Result<String> {
+        let context = self.item_slice_context();
+        context.emit_slice_from_nodes_inner(targets, lib_name, extension_name, &mut warn)
+    }
+
+    fn item_slice_context(&self) -> Cow<'_, Self> {
+        if self.control.schema.is_some() && !self.qualify_default_schema {
+            let mut context = self.clone();
+            context.qualify_default_schema = true;
+            Cow::Owned(context)
+        } else {
+            Cow::Borrowed(self)
+        }
+    }
+
+    fn emit_slice_from_nodes_inner<W: FnMut(String)>(
+        &self,
+        targets: &[NodeIndex],
+        lib_name: &str,
+        extension_name: Option<&str>,
+        warn: &mut W,
+    ) -> eyre::Result<String> {
         let keep = self.collect_transitive_deps(targets);
 
         let mut body = String::new();
@@ -901,19 +935,18 @@ impl<'a> PgrxSql<'a> {
                 )))
             }
             SqlGraphEntity::Ord(o) => {
-                // Unqualified names: matches `PostgresOrdEntity::to_sql`, which
-                // also emits `{name}_btree_ops` without a schema prefix.
+                let schema = self.schema_prefix_for(&node);
                 Ok(Some(format!(
-                    "ALTER EXTENSION \"{ext}\" ADD OPERATOR FAMILY {name}_btree_ops USING btree;\n\
-                     ALTER EXTENSION \"{ext}\" ADD OPERATOR CLASS {name}_btree_ops USING btree;",
+                    "ALTER EXTENSION \"{ext}\" ADD OPERATOR FAMILY {schema}{name}_btree_ops USING btree;\n\
+                     ALTER EXTENSION \"{ext}\" ADD OPERATOR CLASS {schema}{name}_btree_ops USING btree;",
                     name = o.name
                 )))
             }
             SqlGraphEntity::Hash(h) => {
-                // Same unqualified-name rationale as Ord.
+                let schema = self.schema_prefix_for(&node);
                 Ok(Some(format!(
-                    "ALTER EXTENSION \"{ext}\" ADD OPERATOR FAMILY {name}_hash_ops USING hash;\n\
-                     ALTER EXTENSION \"{ext}\" ADD OPERATOR CLASS {name}_hash_ops USING hash;",
+                    "ALTER EXTENSION \"{ext}\" ADD OPERATOR FAMILY {schema}{name}_hash_ops USING hash;\n\
+                     ALTER EXTENSION \"{ext}\" ADD OPERATOR CLASS {schema}{name}_hash_ops USING hash;",
                     name = h.name
                 )))
             }
@@ -2166,14 +2199,14 @@ fn initialize_resolved_type<'a>(
     slot: &str,
     ty_name: &str,
 ) -> eyre::Result<()> {
-    if find_graph_type_target(type_ident, types, enums, extension_sqls).is_some() {
-        return Ok(());
-    }
-
     if matches!(type_origin, TypeOrigin::External) {
         builtin_types
             .entry(type_ident.to_string())
             .or_insert_with(|| graph.add_node(SqlGraphEntity::BuiltinType(type_ident.to_string())));
+        return Ok(());
+    }
+
+    if find_graph_type_target(type_ident, types, enums, extension_sqls).is_some() {
         return Ok(());
     }
 
@@ -2195,20 +2228,20 @@ fn connect_resolved_type<'a>(
     slot: &str,
     ty_name: &str,
 ) -> eyre::Result<()> {
-    if let Some(ty_index) = find_graph_type_target(type_ident, types, enums, extension_sqls) {
-        graph.add_edge(ty_index, index, requires);
-        return Ok(());
-    }
-
-    if let Some(builtin_index) = builtin_types.get(type_ident) {
-        graph.add_edge(*builtin_index, index, requires);
-        return Ok(());
-    }
-
     if matches!(type_origin, TypeOrigin::External) {
+        if let Some(builtin_index) = builtin_types.get(type_ident) {
+            graph.add_edge(*builtin_index, index, requires);
+            return Ok(());
+        }
+
         return Err(eyre!(
             "missing external-type placeholder for type ident `{type_ident}` while connecting {owner_kind} `{owner_name}` {slot}"
         ));
+    }
+
+    if let Some(ty_index) = find_graph_type_target(type_ident, types, enums, extension_sqls) {
+        graph.add_edge(ty_index, index, requires);
+        return Ok(());
     }
 
     Err(unresolved_type_ident(owner_kind, owner_name, slot, ty_name, type_ident))
@@ -2257,6 +2290,12 @@ mod tests {
             schema: None,
             trusted: false,
         }
+    }
+
+    fn control_file_with_schema(schema: &str) -> ControlFile {
+        let mut control = control_file();
+        control.schema = Some(schema.into());
+        control
     }
 
     fn to_sql_config() -> ToSqlConfigEntity<'static> {
@@ -3034,6 +3073,134 @@ mod tests {
             variants: vec!["red", "green", "blue"],
             to_sql_config: to_sql_config(),
         }
+    }
+
+    #[test]
+    fn item_slice_uses_control_schema_without_changing_full_schema() {
+        let color_ty = extension_owned_type("tests::Color", "tests::Color", "Color");
+        let color = enum_entity("Color");
+        let fun = function_entity("paint", vec![], PgExternReturnEntity::Type { ty: color_ty });
+
+        let sql = PgrxSql::build(
+            vec![
+                SqlGraphEntity::ExtensionRoot(control_file_with_schema("fixed_schema")),
+                SqlGraphEntity::Enum(color),
+                SqlGraphEntity::Function(fun),
+            ]
+            .into_iter(),
+            "myext".into(),
+            false,
+        )
+        .unwrap();
+
+        let full = sql.to_sql().expect("full schema should render");
+        assert!(full.contains("CREATE TYPE Color AS ENUM"), "full schema changed:\n{full}");
+        assert!(
+            !full.contains("CREATE TYPE fixed_schema.Color AS ENUM"),
+            "full schema should not use control schema:\n{full}"
+        );
+        assert!(
+            !full.contains(r#"CREATE  FUNCTION fixed_schema."paint""#),
+            "full schema should not qualify function with control schema:\n{full}"
+        );
+
+        let (out, warnings) = slice_with_warnings(&sql, &["paint".into()], "myext", Some("myext"));
+        assert!(warnings.is_empty(), "unexpected warnings: {warnings:?}");
+        assert!(
+            out.contains("CREATE TYPE fixed_schema.Color AS ENUM"),
+            "slice enum should use control schema:\n{out}"
+        );
+        assert!(
+            out.contains(r#"CREATE  FUNCTION fixed_schema."paint""#),
+            "slice function should use control schema:\n{out}"
+        );
+        assert!(
+            out.contains("RETURNS fixed_schema.Color"),
+            "slice return type should use control schema:\n{out}"
+        );
+        assert!(
+            out.contains(r#"ALTER EXTENSION "myext" ADD TYPE fixed_schema.Color;"#),
+            "slice ADD TYPE should use control schema:\n{out}"
+        );
+        assert!(
+            out.contains(r#"ALTER EXTENSION "myext" ADD FUNCTION fixed_schema."paint"();"#),
+            "slice ADD FUNCTION should use control schema:\n{out}"
+        );
+    }
+
+    #[test]
+    fn item_slice_keeps_external_array_types_unqualified_and_honors_pg_schema() {
+        let double_precision_array =
+            external_type("alloc::vec::Vec<f64>", "f64", "double precision[]");
+        let color_ty = extension_owned_type(
+            "tests::paint_schema::Color",
+            "tests::paint_schema::Color",
+            "Color",
+        );
+        let mut color = enum_entity("Color");
+        color.module_path = "tests::paint_schema";
+        color.full_path = "tests::paint_schema::Color";
+        color.type_ident = "tests::paint_schema::Color";
+        let schema = schema_entity("tests::paint_schema", "paint_schema");
+        let mut fun = function_entity(
+            "paint",
+            vec![PgExternArgumentEntity { pattern: "weights", used_ty: double_precision_array }],
+            PgExternReturnEntity::Type { ty: color_ty },
+        );
+        fun.module_path = "tests::paint_schema";
+        fun.full_path = "tests::paint_schema::paint";
+
+        let sql = PgrxSql::build(
+            vec![
+                SqlGraphEntity::ExtensionRoot(control_file_with_schema("fixed_schema")),
+                SqlGraphEntity::Schema(schema),
+                SqlGraphEntity::Enum(color),
+                SqlGraphEntity::Function(fun),
+            ]
+            .into_iter(),
+            "myext".into(),
+            false,
+        )
+        .unwrap();
+
+        let (out, warnings) = slice_with_warnings(
+            &sql,
+            &["tests::paint_schema::paint".into()],
+            "myext",
+            Some("myext"),
+        );
+        assert!(warnings.is_empty(), "unexpected warnings: {warnings:?}");
+        assert!(
+            out.contains("CREATE TYPE paint_schema.Color AS ENUM"),
+            "slice enum should honor #[pg_schema]:\n{out}"
+        );
+        assert!(
+            out.contains(r#"CREATE  FUNCTION paint_schema."paint""#),
+            "slice function should honor #[pg_schema]:\n{out}"
+        );
+        assert!(
+            out.contains("RETURNS paint_schema.Color"),
+            "extension-owned return type should use #[pg_schema]:\n{out}"
+        );
+        assert!(
+            out.contains(r#""weights" double precision[]"#),
+            "external array argument should remain unqualified:\n{out}"
+        );
+        assert!(
+            out.contains(
+                r#"ALTER EXTENSION "myext" ADD FUNCTION paint_schema."paint"(double precision[]);"#
+            ),
+            "ADD FUNCTION signature should leave external array unqualified:\n{out}"
+        );
+        assert!(
+            !out.contains("fixed_schema.double precision[]")
+                && !out.contains("paint_schema.double precision[]"),
+            "external array type should not be schema-qualified:\n{out}"
+        );
+        assert!(
+            !out.contains("fixed_schema.Color") && !out.contains(r#"fixed_schema."paint""#),
+            "control schema should not override #[pg_schema]:\n{out}"
+        );
     }
 
     #[test]
