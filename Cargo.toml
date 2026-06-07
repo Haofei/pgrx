@@ -31,6 +31,7 @@ exclude = [
 [workspace.package]
 authors = ["PgCentral Foundation, Inc. <contact@pgcentral.org>"]
 edition = "2024"
+rust-version = "1.96"
 license = "MIT"
 repository = "https://github.com/pgcentralfoundation/pgrx/"
 homepage = "https://github.com/pgcentralfoundation/pgrx/"
