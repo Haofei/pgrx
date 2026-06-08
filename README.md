@@ -92,7 +92,7 @@ It is currently expected to work on other "Unix" OS with possible small changes,
  ‡ A local PostgreSQL server installation is not required. On Linux and MacOS, `cargo pgrx` can download and compile PostgreSQL versions on its own. On Windows, `cargo pgrx` downloads precompiled PostgreSQL versions from EnterpriseDB.
 
  ⹋ PGRX has not been tested to work on 32-bit, but the library attempts to handle conversion of `pg_sys::Datum`
-to and from `int8` and `double` types. Use it only for your own risk. We do not plan to add official support
+to and from `int8` and `double` types. Use it only at your own risk. We do not plan to add official support
 without considerable ongoing technical and financial contributions.
 
 ### macOS
@@ -137,7 +137,7 @@ Postgres installs get rebuilt.
 
 Running PGRX on Windows requires MSVC prerequisites.
 
-On Windows, please follow https://rust-lang.github.io/rustup/installation/windows-msvc.html to set up it.
+On Windows, please follow https://rust-lang.github.io/rustup/installation/windows-msvc.html to set it up.
 
 ## Getting Started
 
@@ -222,7 +222,7 @@ Then, modify the standard build process in the following ways:
 3) Pass the `--pg-config` flag to `cargo pgrx package` with the aforementioned `pg_config`.
 4) Pass the `--target` flag to `cargo pgrx package` with the rust triple of the cross machine.
 
-`cargo pgrx run` will not not work.
+`cargo pgrx run` will not work.
 
 ## Upgrading
 
@@ -307,7 +307,7 @@ explicitly upon database creation.
 
 ## Caveats & Known Issues
 
-There's probably more than are listed here, but a primary things of note are:
+There are probably more issues than the ones listed here, but the primary ones of note are:
 
  - Threading is not really supported.  Postgres is strictly single-threaded.  As such, if you do venture into using threads, those threads **MUST NOT** call *any* internal Postgres function, or otherwise use any Postgres-provided pointer.  There's also a potential problem with Postgres' use of `sigprocmask`.  This was being discussed on the -hackers list, even with a patch provided, but the conversation seems to have stalled (https://www.postgresql.org/message-id/flat/5EF20168.2040508%40anastigmatix.net#4533edb74194d30adfa04a6a2ce635ba).
  - How to correctly interact with Postgres in an `async` context remains unexplored.
@@ -318,7 +318,7 @@ There's probably more than are listed here, but a primary things of note are:
 
 ## TODO
 
-There's a few things on our immediate TODO list
+There are a few things on our immediate TODO list
 
  - Automatic extension schema upgrade scripts
  - Improved unit testing framework
