@@ -45,6 +45,8 @@ fn spi_return_query() -> Result<
     let query = "SELECT oid, relname::text || '-pg17' FROM pg_class";
     #[cfg(feature = "pg18")]
     let query = "SELECT oid, relname::text || '-pg18' FROM pg_class";
+    #[cfg(feature = "pg19")]
+    let query = "SELECT oid, relname::text || '-pg19' FROM pg_class";
 
     Spi::connect(|client| {
         client
