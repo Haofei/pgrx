@@ -26531,6 +26531,16 @@ impl Default for ConfigData {
     }
 }
 #[repr(C)]
+#[derive(Debug, Default, Copy, Clone)]
+pub struct PGLZ_Strategy {
+    pub min_input_size: int32,
+    pub max_input_size: int32,
+    pub min_comp_rate: int32,
+    pub first_success_by: int32,
+    pub match_size_good: int32,
+    pub match_size_drop: int32,
+}
+#[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct AggStatePerTransData {
     pub aggref: *mut Aggref,
@@ -43341,6 +43351,22 @@ unsafe extern "C-unwind" {
         ControlFile: *mut ControlFileData,
         do_sync: bool,
     );
+    pub static PGLZ_strategy_default: *const PGLZ_Strategy;
+    pub static PGLZ_strategy_always: *const PGLZ_Strategy;
+    pub fn pglz_compress(
+        source: *const ::core::ffi::c_char,
+        slen: int32,
+        dest: *mut ::core::ffi::c_char,
+        strategy: *const PGLZ_Strategy,
+    ) -> int32;
+    pub fn pglz_decompress(
+        source: *const ::core::ffi::c_char,
+        slen: int32,
+        dest: *mut ::core::ffi::c_char,
+        rawsize: int32,
+        check_complete: bool,
+    ) -> int32;
+    pub fn pglz_maximum_compressed_size(rawsize: int32, total_compressed_size: int32) -> int32;
     pub fn ExecInitAgg(
         node: *mut Agg,
         estate: *mut EState,
