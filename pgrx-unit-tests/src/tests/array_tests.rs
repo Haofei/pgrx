@@ -63,11 +63,10 @@ fn optional_array_with_default(values: default!(Option<Array<i32>>, "NULL")) -> 
     values.unwrap().iter().map(|v| v.unwrap_or(0)).sum()
 }
 
-// TODO: fix this test by fixing serde impls for `Array<'a, &'a str> -> Json`
-// #[pg_extern]
-// fn serde_serialize_array<'dat>(values: Array<'dat, &'dat str>) -> Json {
-//     Json(json! { { "values": values } })
-// }
+#[pg_extern]
+fn serde_serialize_array<'dat>(values: Array<'dat, &'dat str>) -> Json {
+    Json(json! { { "values": values } })
+}
 
 #[pg_extern]
 fn serde_serialize_array_i32(values: Array<i32>) -> Json {
@@ -77,6 +76,21 @@ fn serde_serialize_array_i32(values: Array<i32>) -> Json {
 #[pg_extern]
 fn serde_serialize_array_i32_deny_null(values: Array<i32>) -> Json {
     Json(json! { { "values": values.iter_deny_null() } })
+}
+
+#[pg_extern]
+fn serde_serialize_array_date(values: Array<Date>) -> Json {
+    Json(json! { { "values": values } })
+}
+
+#[pg_extern]
+fn serde_serialize_array_timestamp(values: Array<Timestamp>) -> Json {
+    Json(json! { { "values": values } })
+}
+
+#[pg_extern]
+fn serde_serialize_array_json(values: Array<pgrx::Json>) -> Json {
+    Json(json! { { "values": values } })
 }
 
 #[pg_extern]
@@ -247,16 +261,57 @@ mod tests {
         Spi::run("SELECT iterate_array_with_deny_null(ARRAY[1,2,3, NULL]::int[])")
     }
 
-    // TODO: fix this test by redesigning SPI.
-    // #[pg_test]
-    // fn test_serde_serialize_array() -> Result<(), pgrx::spi::Error> {
-    //     let json = Spi::get_one::<Json>(
-    //         "SELECT serde_serialize_array(ARRAY['one', null, 'two', 'three'])",
-    //     )?
-    //     .expect("returned json was null");
-    //     assert_eq!(json.0, json! {{"values": ["one", null, "two", "three"]}});
-    //     Ok(())
-    // }
+    #[pg_test]
+    fn test_serde_serialize_array() -> Result<(), pgrx::spi::Error> {
+        let json = Spi::get_one::<Json>(
+            "SELECT serde_serialize_array(ARRAY['one', null, 'two', 'three'])",
+        )?
+        .expect("returned json was null");
+        assert_eq!(json.0, json! {{"values": ["one", null, "two", "three"]}});
+        Ok(())
+    }
+
+    #[pg_test]
+    fn test_serde_serialize_array_empty() -> Result<(), pgrx::spi::Error> {
+        let json = Spi::get_one::<Json>("SELECT serde_serialize_array(ARRAY[]::text[])")?
+            .expect("returned json was null");
+        assert_eq!(json.0, json! {{"values": []}});
+        Ok(())
+    }
+
+    #[pg_test]
+    fn test_serde_serialize_array_all_null() -> Result<(), pgrx::spi::Error> {
+        let json =
+            Spi::get_one::<Json>("SELECT serde_serialize_array(ARRAY[NULL, NULL, NULL]::text[])")?
+                .expect("returned json was null");
+        assert_eq!(json.0, json! {{"values": [null, null, null]}});
+        Ok(())
+    }
+
+    #[pg_test]
+    fn test_serde_serialize_array_unicode() -> Result<(), pgrx::spi::Error> {
+        let json = Spi::get_one::<Json>(
+            "SELECT serde_serialize_array(ARRAY['中文', '😀', E'a\\nb', '\"quoted\"'])",
+        )?
+        .expect("returned json was null");
+        assert_eq!(json.0, json! {{"values": ["中文", "😀", "a\nb", "\"quoted\""]}});
+        Ok(())
+    }
+
+    #[pg_test]
+    fn test_serde_serialize_array_large() -> Result<(), pgrx::spi::Error> {
+        let json = Spi::get_one::<Json>(
+            "SELECT serde_serialize_array(\
+                ARRAY(SELECT s::text FROM generate_series(1, 1000) s))",
+        )?
+        .expect("returned json was null");
+        let obj = json.0.as_object().expect("object");
+        let values = obj.get("values").and_then(|v| v.as_array()).expect("values array");
+        assert_eq!(values.len(), 1000);
+        assert_eq!(values[0], json!("1"));
+        assert_eq!(values[999], json!("1000"));
+        Ok(())
+    }
 
     #[pg_test]
     fn test_optional_array_with_default() {
@@ -279,6 +334,41 @@ mod tests {
         Spi::get_one::<Json>(
             "SELECT serde_serialize_array_i32_deny_null(ARRAY[1, 2, 3, null, 4, 5])",
         )
+    }
+
+    #[pg_test]
+    fn test_serde_serialize_array_date() -> Result<(), pgrx::spi::Error> {
+        let json = Spi::get_one::<Json>(
+            "SELECT serde_serialize_array_date(ARRAY['1977-07-04', NULL, '2026-01-15']::date[])",
+        )?
+        .expect("returned json was null");
+        assert_eq!(json.0, json! {{"values": ["1977-07-04", null, "2026-01-15"]}});
+        Ok(())
+    }
+
+    #[pg_test]
+    fn test_serde_serialize_array_timestamp() -> Result<(), pgrx::spi::Error> {
+        let json = Spi::get_one::<Json>(
+            "SELECT serde_serialize_array_timestamp(\
+                ARRAY['2026-01-15 12:34:56', NULL]::timestamp[])",
+        )?
+        .expect("returned json was null");
+        let arr = json.0.get("values").and_then(|v| v.as_array()).expect("values array");
+        assert_eq!(arr.len(), 2);
+        assert!(arr[0].as_str().expect("string").starts_with("2026-01-15"));
+        assert_eq!(arr[1], json!(null));
+        Ok(())
+    }
+
+    #[pg_test]
+    fn test_serde_serialize_array_json() -> Result<(), pgrx::spi::Error> {
+        let json = Spi::get_one::<Json>(
+            "SELECT serde_serialize_array_json(\
+                ARRAY['{\"a\":1}', NULL, '[true,false]']::json[])",
+        )?
+        .expect("returned json was null");
+        assert_eq!(json.0, json! {{"values": [{"a": 1}, null, [true, false]]}});
+        Ok(())
     }
 
     #[pg_test]
